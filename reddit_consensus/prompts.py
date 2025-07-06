@@ -57,7 +57,7 @@ For multiple tools (RECOMMENDED - much faster):
             "tool_params": {{"post_id": "post_id_here"}}
         }},
         {{
-            "tool_name": "reddit_get_post_comments_with_tree",
+            "tool_name": "reddit_get_post_comments",
             "tool_params": {{"post_id": "post_id_here", "max_depth": {DEFAULT_MAX_DEPTH}}}
         }}
     ],
@@ -133,10 +133,6 @@ For multiple tools (RECOMMENDED - critique all recommendations simultaneously):
         {{
             "tool_name": "reddit_get_post_comments",
             "tool_params": {{"post_id": "post_id_here"}}
-        }},
-        {{
-            "tool_name": "reddit_get_post_comments_with_tree",
-            "tool_params": {{"post_id": "post_id_here", "max_depth": {DEFAULT_MAX_DEPTH}}}
         }}
     ],
     "reasoning": "why you're using these tools together for critique"

@@ -5,7 +5,7 @@ from typing import Dict, Any, List, Optional
 from openai import OpenAI
 
 from .agent_state import AgentState
-from .tools import reddit_search_for_posts, reddit_get_post_comments, reddit_get_post_comments_with_tree
+from .tools import reddit_search_for_posts, reddit_get_post_comments
 from .prompts import get_reasoning_prompt, get_draft_recommendations_prompt, get_critique_prompt, get_final_recommendations_prompt
 from .colors import print_colored, print_phase_header, print_recommendations_table, render_dashboard, console
 
@@ -24,7 +24,6 @@ class AutonomousRedditConsensus:
         self.tools = {
             "reddit_search_for_posts": reddit_search_for_posts,
             "reddit_get_post_comments": reddit_get_post_comments,
-            "reddit_get_post_comments_with_tree": reddit_get_post_comments_with_tree,
         }
 
         self.max_iterations = 10
@@ -86,14 +85,10 @@ class AutonomousRedditConsensus:
         # Log tool-specific information
         if tool_name == "reddit_search_for_posts":
             print_colored("SEARCH", f"{prefix}Search: {params.get('query', 'N/A')}")
-        elif tool_name in ["reddit_get_post_comments", "reddit_get_post_comments_with_tree"]:
+        elif tool_name == "reddit_get_post_comments":
             post_id = params.get('post_id', 'N/A')
             post_title = self._find_post_title(post_id)
-            if tool_name == "reddit_get_post_comments_with_tree":
-                max_depth = params.get('max_depth', 3)
-                print_colored("POST", f"{prefix}Post: {post_title[:80]}... (tree depth: {max_depth})")
-            else:
-                print_colored("POST", f"{prefix}Post: {post_title[:80]}...")
+            print_colored("POST", f"{prefix}Post: {post_title[:80]}...")
 
     def _log_tool_results(self, tool_name: str, result: str, prefix: str = "") -> None:
         """Log tool execution results in a readable format"""
@@ -107,7 +102,7 @@ class AutonomousRedditConsensus:
                 print(f"   {prefix}Found {len(result_data['comments'])} comments")
                 if result_data.get('post_title'):
                     print(f"   {prefix}Post: {result_data['post_title'][:80]}...")
-            elif tool_name == "reddit_get_post_comments_with_tree" and "comment_tree" in result_data:
+            elif tool_name == "reddit_get_post_comments" and "comment_tree" in result_data:
                 comment_tree = result_data['comment_tree']
                 total_replies = sum(self._count_replies(comment) for comment in comment_tree)
                 print(f"   {prefix}Found {len(comment_tree)} comments with {total_replies} replies")
@@ -243,7 +238,7 @@ class AutonomousRedditConsensus:
                     console.print(f"   [green][DONE][/green] {prefix}{friendly_name}: ", end="")
                     if tool_name == "reddit_search_for_posts":
                         console.print(f"'{params.get('query', 'N/A')}'")
-                    elif tool_name in ["reddit_get_post_comments", "reddit_get_post_comments_with_tree"]:
+                    elif tool_name == "reddit_get_post_comments":
                         post_id = params.get('post_id', 'N/A')
                         post_title = self._find_post_title(post_id)
                         console.print(f"'{post_title[:50]}...'")

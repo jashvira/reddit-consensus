@@ -24,7 +24,7 @@ async def main():
     agent = AutonomousRedditConsensus()
 
     # Test query
-    query = "best wine bars in adelaide"
+    query = "best wine bars in mumbai"
 
     try:
         # Run the query

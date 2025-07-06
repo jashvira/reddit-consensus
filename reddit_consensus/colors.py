@@ -27,7 +27,6 @@ THEME = {
 TOOL_NAMES = {
     "reddit_search_for_posts": "Search Reddit Posts",
     "reddit_get_post_comments": "Fetch Comments",
-    "reddit_get_post_comments_with_tree": "Fetch Comment Tree",
 }
 
 def get_tool_name(tool_name: str) -> str:
@@ -105,7 +104,7 @@ def _extract_details(result: Dict[str, Any]) -> str:
                     subreddits.add(sub)
             return f"{len(posts)} posts\n{len(subreddits)} subs"
 
-        elif tool_name in ["reddit_get_post_comments", "reddit_get_post_comments_with_tree"]:
+        elif tool_name == "reddit_get_post_comments":
             if "comments" in data:
                 comments = data["comments"]
                 title = data.get("post_title", "")[:15] + "..."
@@ -184,7 +183,7 @@ def create_result_panels(tool_results: List[Dict[str, Any]]) -> List[Panel]:
             if panel:
                 panels.append(panel)
 
-        elif tool_name in ["reddit_get_post_comments", "reddit_get_post_comments_with_tree"] and result_data:
+        elif tool_name == "reddit_get_post_comments" and result_data:
             # Try hierarchical first, then fall back to flat
             panel = _create_hierarchical_comments_panel(result_data)
             if not panel:

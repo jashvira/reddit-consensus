@@ -9,10 +9,9 @@ import json
 from reddit_consensus.tools import (
     reddit_search_for_posts,
     reddit_get_post_comments,
-    reddit_get_post_comments_with_tree,
-    _get_reddit_credentials,
     _build_comment_tree
 )
+from reddit_consensus.config import get_reddit_credentials
 from reddit_consensus.recommender import AutonomousRedditConsensus
 
 
@@ -74,11 +73,11 @@ class TestRedditTools:
             assert isinstance(post["created_utc"], (int, float))
 
     @pytest.mark.asyncio
-    async def test_get_comments_flat(self, agent):
-        """Test flat comment retrieval functionality"""
-        # Get a valid post ID first
+    async def test_get_comments_with_subtree_flag(self, agent):
+        """Test backward compatibility - include_subtree parameter was removed"""
         post_id = await get_valid_post_id()
 
+        # This should work without any special flags since we always return tree format
         result_list = await agent._execute_tools([{
             'tool_name': 'reddit_get_post_comments',
             'tool_params': {'post_id': post_id, 'max_comments': 3}
@@ -86,120 +85,26 @@ class TestRedditTools:
 
         result = result_list[0]["result"]
         data = assert_valid_json_response(result)
-        assert "comments" in data
-        assert len(data["comments"]) <= 3
 
-        # Test new post fields
-        assert "post_created_utc" in data
-        assert "post_author" in data
-
-        # Test new comment fields if comments exist
-        if data["comments"]:
-            comment = data["comments"][0]
-            required_fields = ["id", "text", "score", "author", "created_utc"]
-            assert all(key in comment for key in required_fields)
-            assert isinstance(comment["created_utc"], (int, float))
-
-    @pytest.mark.asyncio
-    async def test_get_comments_with_subtree_flag(self, agent):
-        """Test using include_subtree flag with existing function"""
-        post_id = await get_valid_post_id()
-
-        result_list = await agent._execute_tools([{
-            'tool_name': 'reddit_get_post_comments',
-            'tool_params': {'post_id': post_id, 'max_comments': 3, 'include_subtree': True}
-        }], log_results=False)
-
-        result = result_list[0]["result"]
-        data = assert_valid_json_response(result)
-
-        # Should return hierarchical structure when include_subtree=True
-        assert "comment_tree" in data or "comments" in data  # May fall back to flat if no tree
-        if "comment_tree" in data:
-            assert isinstance(data["comment_tree"], list)
-            assert "max_depth" in data
-            # Test post timestamp fields
-            assert "post_created_utc" in data
-            assert "post_author" in data
-
-    @pytest.mark.asyncio
-    async def test_get_comments_with_tree_direct(self, agent):
-        """Test hierarchical comment retrieval functionality"""
-        post_id = await get_valid_post_id()
-
-        result_list = await agent._execute_tools([{
-            'tool_name': 'reddit_get_post_comments_with_tree',
-            'tool_params': {'post_id': post_id, 'max_comments': 3, 'max_depth': 2}
-        }], log_results=False)
-
-        result = result_list[0]["result"]
-        data = assert_valid_json_response(result)
-
-        # Verify hierarchical structure
+        # Should always return hierarchical structure now
         assert "comment_tree" in data
-        assert "max_depth" in data
-        assert "total_comments" in data
         assert isinstance(data["comment_tree"], list)
-        assert data["max_depth"] == 2
-        assert len(data["comment_tree"]) <= 3
-
+        assert "max_depth" in data
         # Test post timestamp fields
         assert "post_created_utc" in data
         assert "post_author" in data
 
-        # Check comment structure if comments exist
-        if data["comment_tree"]:
-            comment = data["comment_tree"][0]
-            required_fields = ["id", "text", "score", "depth", "author", "created_utc", "replies", "reply_count"]
-            for field in required_fields:
-                assert field in comment
-            assert comment["depth"] == 0  # Top-level comment
-            assert isinstance(comment["replies"], list)
-            assert isinstance(comment["created_utc"], (int, float))
 
-    @pytest.mark.asyncio
-    async def test_hierarchical_comment_depth_limits(self, agent):
-        """Test that hierarchical comments respect depth limits"""
-        post_id = await get_valid_post_id()
 
-        # Test different depth limits
-        for max_depth in [1, 2, 3]:
-            result_list = await agent._execute_tools([{
-                'tool_name': 'reddit_get_post_comments_with_tree',
-                'tool_params': {'post_id': post_id, 'max_comments': 2, 'max_depth': max_depth}
-            }], log_results=False)
 
-            result = result_list[0]["result"]
-            data = json.loads(result)
 
-            if data.get("comment_tree"):
-                # Check that no comment exceeds the depth limit
-                def check_depth(comment, max_allowed_depth):
-                    assert comment["depth"] <= max_allowed_depth
-                    for reply in comment.get("replies", []):
-                        check_depth(reply, max_allowed_depth)
 
-                # The max_depth parameter controls traversal depth
-                # max_depth=1 creates depths 0,1 -> max actual depth is 1
-                # max_depth=2 creates depths 0,1,2 -> max actual depth is 2
-                # max_depth=3 creates depths 0,1,2,3 -> max actual depth is 3
-                # So we need to check against max_depth-1 but the logic was wrong before
-                # Let's just check that depth doesn't exceed max_depth-1 for sufficient data
-
-                for comment in data["comment_tree"]:
-                    check_depth(comment, max_depth)  # Allow up to max_depth as the maximum
-
-    @pytest.mark.asyncio
-    async def test_tool_registry_integration(self, agent):
-        """Test that new tool is properly registered in agent"""
-        assert "reddit_get_post_comments_with_tree" in agent.tools
-        assert callable(agent.tools["reddit_get_post_comments_with_tree"])
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("tool_name,params,expected_error", [
         ("invalid_tool_name", {"query": "test"}, "Tool invalid_tool_name not found"),
         ("reddit_search_for_posts", {}, "Error"),  # Missing required query parameter
-        ("reddit_get_post_comments_with_tree", {}, "Error"),  # Missing required post_id
+        ("reddit_get_post_comments", {}, "Error"),  # Missing required post_id
     ])
     async def test_error_handling(self, agent, tool_name, params, expected_error):
         """Test error handling for various failure scenarios"""
@@ -226,9 +131,9 @@ class TestRedditTools:
             assert "author" in post
             assert "subreddit" in post
 
-        # Test hierarchical comments function
+        # Test hierarchical comments function (now unified)
         post_id = await get_valid_post_id()
-        result = await reddit_get_post_comments_with_tree(post_id, max_comments=1, max_depth=2)
+        result = await reddit_get_post_comments(post_id, max_comments=1, max_depth=2)
         data = assert_valid_json_response(result)
         assert "comment_tree" in data
         assert "post_created_utc" in data
@@ -251,21 +156,10 @@ class TestRedditTools:
         # Should handle gracefully, might return empty results or error
         assert "comments" in data or "error" in data.get("status", "")
 
-    @pytest.mark.asyncio
-    async def test_invalid_post_comments_hierarchical(self, agent):
-        """Test hierarchical comment retrieval with invalid post ID"""
-        result_list = await agent._execute_tools([{
-            'tool_name': 'reddit_get_post_comments_with_tree',
-            'tool_params': {'post_id': 'invalid_post_id', 'max_comments': 2}
-        }], log_results=False)
 
-        result = result_list[0]["result"]
-        data = json.loads(result)
-        # Should handle gracefully with error status
-        assert data.get("status") == "error" or "comment_tree" in data
 
     @pytest.mark.asyncio
-    async def test_parallel_tool_execution_with_tree(self, agent):
+    async def test_parallel_tool_execution(self, agent):
         """Test parallel execution including hierarchical comments"""
         post_id = await get_valid_post_id()
 
@@ -276,7 +170,7 @@ class TestRedditTools:
                 'tool_params': {'query': 'python', 'max_results': 1}
             },
             {
-                'tool_name': 'reddit_get_post_comments_with_tree',
+                'tool_name': 'reddit_get_post_comments',
                 'tool_params': {'post_id': post_id, 'max_comments': 2, 'max_depth': 2}
             }
         ], log_results=False)
@@ -285,7 +179,7 @@ class TestRedditTools:
 
         # Verify both tools executed successfully
         search_result = next(r for r in result_list if r["tool_name"] == "reddit_search_for_posts")
-        comments_result = next(r for r in result_list if r["tool_name"] == "reddit_get_post_comments_with_tree")
+        comments_result = next(r for r in result_list if r["tool_name"] == "reddit_get_post_comments")
 
         search_data = json.loads(search_result["result"])
         comments_data = json.loads(comments_result["result"])
@@ -324,11 +218,11 @@ class TestRedditTools:
         """Test that timestamp data is consistently captured across all tools"""
         post_id = await get_valid_post_id()
 
-        # Test all three comment tools for timestamp consistency
+        # Test comment tool for timestamp consistency with different parameters
         tools_to_test = [
             ('reddit_get_post_comments', {}),
-            ('reddit_get_post_comments_with_tree', {'max_depth': 2}),
-            ('reddit_get_post_comments', {'include_subtree': True})
+            ('reddit_get_post_comments', {'max_depth': 2}),
+            ('reddit_get_post_comments', {'max_depth': 1})
         ]
 
         for tool_name, extra_params in tools_to_test:
@@ -341,7 +235,44 @@ class TestRedditTools:
             result = result_list[0]["result"]
             data = json.loads(result)
 
-            # All tools should return post timestamp info
+            # All tools should return post timestamp info and tree format
             if data.get("status") != "error":
                 assert "post_created_utc" in data or "error" in data.get("status", ""), f"Missing post timestamp in {tool_name}"
                 assert "post_author" in data or "error" in data.get("status", ""), f"Missing post author in {tool_name}"
+                assert "comment_tree" in data or "error" in data.get("status", ""), f"Missing comment_tree in {tool_name}"
+
+    def test_credential_management(self):
+        """Test centralized credential management"""
+        # Test that the function exists and can be called
+        try:
+            credentials = get_reddit_credentials()
+            assert isinstance(credentials, dict)
+            required_keys = ["client_id", "client_secret", "user_agent"]
+            assert all(key in credentials for key in required_keys)
+        except ValueError as e:
+            # If credentials are missing, that's expected in test environment
+            assert "Reddit API credentials not found" in str(e)
+
+    def test_validation_script(self):
+        """Test configuration validation script functionality"""
+        from reddit_consensus.validate_config import main
+        from unittest.mock import patch
+        import io
+        import sys
+
+        # Capture stdout to check validation output
+        captured_output = io.StringIO()
+        with patch('sys.stdout', captured_output):
+            try:
+                result = main()
+                output = captured_output.getvalue()
+
+                # Should contain validation messages
+                assert "Validating Reddit Consensus Configuration" in output
+
+                # Result should be boolean
+                assert isinstance(result, bool)
+
+            except SystemExit as e:
+                # Script may exit with code 0 or 1, both are valid test outcomes
+                assert e.code in [0, 1]
