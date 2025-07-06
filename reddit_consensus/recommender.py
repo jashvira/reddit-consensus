@@ -5,8 +5,9 @@ from typing import Dict, Any, List, Optional
 from openai import OpenAI
 
 from .agent_state import AgentState
-from .tools import reddit_search_for_posts, reddit_get_post_comments
+from .tools import reddit_search_for_posts, reddit_get_post_comments, reddit_get_post_comments_with_tree
 from .prompts import get_reasoning_prompt, get_draft_recommendations_prompt, get_critique_prompt, get_final_recommendations_prompt
+from .colors import print_colored, print_phase_header, print_recommendations_table, render_dashboard, console
 
 # Global model configuration
 MODEL_NAME = "gpt-4.1"
@@ -23,9 +24,10 @@ class AutonomousRedditConsensus:
         self.tools = {
             "reddit_search_for_posts": reddit_search_for_posts,
             "reddit_get_post_comments": reddit_get_post_comments,
+            "reddit_get_post_comments_with_tree": reddit_get_post_comments_with_tree,
         }
-        
-        self.max_iterations = 20
+
+        self.max_iterations = 10
 
     # ===== UTILITY METHODS =====
 
@@ -77,15 +79,21 @@ class AutonomousRedditConsensus:
 
     def _log_tool_start(self, tool_name: str, params: Dict[str, Any], prefix: str = "") -> None:
         """Log tool execution start with parameters"""
-        print(f"🔧 {prefix}Using: {tool_name}")
-        
+        from .colors import get_friendly_tool_name
+        friendly_name = get_friendly_tool_name(tool_name)
+        print_colored("TOOL", f"{prefix}Using: {friendly_name}")
+
         # Log tool-specific information
         if tool_name == "reddit_search_for_posts":
-            print(f"🔍 {prefix}Search: {params.get('query', 'N/A')}")
-        elif tool_name == "reddit_get_post_comments":
+            print_colored("SEARCH", f"{prefix}Search: {params.get('query', 'N/A')}")
+        elif tool_name in ["reddit_get_post_comments", "reddit_get_post_comments_with_tree"]:
             post_id = params.get('post_id', 'N/A')
             post_title = self._find_post_title(post_id)
-            print(f"📖 {prefix}Post: {post_title[:80]}...")
+            if tool_name == "reddit_get_post_comments_with_tree":
+                max_depth = params.get('max_depth', 3)
+                print_colored("POST", f"{prefix}Post: {post_title[:80]}... (tree depth: {max_depth})")
+            else:
+                print_colored("POST", f"{prefix}Post: {post_title[:80]}...")
 
     def _log_tool_results(self, tool_name: str, result: str, prefix: str = "") -> None:
         """Log tool execution results in a readable format"""
@@ -99,8 +107,21 @@ class AutonomousRedditConsensus:
                 print(f"   {prefix}Found {len(result_data['comments'])} comments")
                 if result_data.get('post_title'):
                     print(f"   {prefix}Post: {result_data['post_title'][:80]}...")
+            elif tool_name == "reddit_get_post_comments_with_tree" and "comment_tree" in result_data:
+                comment_tree = result_data['comment_tree']
+                total_replies = sum(self._count_replies(comment) for comment in comment_tree)
+                print(f"   {prefix}Found {len(comment_tree)} comments with {total_replies} replies")
+                if result_data.get('post_title'):
+                    print(f"   {prefix}Post: {result_data['post_title'][:80]}...")
         except (json.JSONDecodeError, KeyError):
             pass
+
+    def _count_replies(self, comment: Dict[str, Any]) -> int:
+        """Count total replies in a comment tree"""
+        count = len(comment.get("replies", []))
+        for reply in comment.get("replies", []):
+            count += self._count_replies(reply)
+        return count
 
     def _normalize_tool_requests(self, decision: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Normalize single or multiple tool requests to consistent list format"""
@@ -119,7 +140,7 @@ class AutonomousRedditConsensus:
         for tool_result in results:
             tool_name = tool_result["tool_name"]
             result = tool_result["result"]
-            
+
             # Generate consistent storage key
             if len(results) == 1:
                 # Single tool execution
@@ -127,10 +148,10 @@ class AutonomousRedditConsensus:
             else:
                 # Multiple tool execution
                 data_key = f"{mode}_{tool_name}_{iteration}_{tool_result['index']}"
-            
+
             self.state.add_research_data(data_key, result)
             context += f"\n\n{prefix}Tool {tool_name}: {result}"
-        
+
         return context
 
     # ===== REASONING TURNS =====
@@ -175,17 +196,17 @@ class AutonomousRedditConsensus:
         """Execute a single tool without logging"""
         if tool_name not in self.tools:
             return f"Tool {tool_name} not found"
-        
+
         try:
             return await self.tools[tool_name](**params)
         except Exception as e:
             return f"Error: {str(e)}"
 
-    async def _execute_tools(self, tool_requests: List[Dict[str, Any]], 
+    async def _execute_tools(self, tool_requests: List[Dict[str, Any]],
                             log_results: bool = True, prefix: str = "") -> List[Dict[str, Any]]:
         """Execute tools (single or multiple) with optional logging"""
         if log_results and len(tool_requests) > 1:
-            print(f"🔧 {prefix}Using {len(tool_requests)} tools in parallel")
+            print_colored("PARALLEL", f"{prefix}Using {len(tool_requests)} tools in parallel")
 
         tasks = []
         for i, tool_request in enumerate(tool_requests):
@@ -217,16 +238,18 @@ class AutonomousRedditConsensus:
                     self._log_tool_results(tool_name, result, prefix)
                 else:
                     # Multiple tools - log completion status and results
-                    print(f"   ✅ {prefix}{tool_name}: ", end="")
+                    from .colors import get_friendly_tool_name
+                    friendly_name = get_friendly_tool_name(tool_name)
+                    console.print(f"   [green][DONE][/green] {prefix}{friendly_name}: ", end="")
                     if tool_name == "reddit_search_for_posts":
-                        print(f"'{params.get('query', 'N/A')}'")
-                    elif tool_name == "reddit_get_post_comments":
+                        console.print(f"'{params.get('query', 'N/A')}'")
+                    elif tool_name in ["reddit_get_post_comments", "reddit_get_post_comments_with_tree"]:
                         post_id = params.get('post_id', 'N/A')
                         post_title = self._find_post_title(post_id)
-                        print(f"'{post_title[:50]}...'")
+                        console.print(f"'{post_title[:50]}...'")
                     else:
-                        print("completed")
-                    
+                        console.print("completed")
+
                     self._log_tool_results(tool_name, result, prefix)
 
             results.append({
@@ -300,15 +323,18 @@ class AutonomousRedditConsensus:
             if decision.get("action") in ["use_tool", "use_tools"]:
                 # Normalize to unified tool request format
                 tool_requests = self._normalize_tool_requests(decision)
-                
+
                 # Execute tools (single or multiple)
-                results = await self._execute_tools(tool_requests, log_results=True, prefix=prefix)
-                
+                results = await self._execute_tools(tool_requests, log_results=False, prefix=prefix)
+
+                                # Show results in elegant dashboard layout
+                render_dashboard(results)
+
                 # Store results with unified logic
                 context = self._store_tool_results(results, mode, i, prefix, context)
 
             else:  # finalize
-                print(f" {finalize_msg}")
+                console.print(f" {finalize_msg}")
                 break
 
         return context
@@ -317,14 +343,13 @@ class AutonomousRedditConsensus:
 
     def _finalize_recommendations(self):
         """Generate and store final recommendations"""
-        print("\n Generating final recommendations...")
+        print_phase_header("Phase 4: Final Recommendations")
         self.state.final_recommendations = self._generate_final_recommendations()
         self.state.completed = True
 
     async def process_query(self, user_query: str) -> Dict[str, Any]:
         """Main processing method - orchestrates the full recommendation pipeline"""
-        print(f"Processing: {user_query[:100]}...")
-        print("=" * 50)
+        print_phase_header("Reddit Consensus Agent", f"Processing: {user_query[:100]}...")
 
         # Setup
         self.state.original_query = user_query
@@ -333,11 +358,11 @@ class AutonomousRedditConsensus:
         await self._run_research_phase()
 
         # Phase 2: Generate Draft Recommendations
-        print("\n Generating draft recommendations...")
+        print_phase_header("Phase 2: Draft Recommendations")
         self.state.draft_recommendations = self._generate_draft_recommendations()
 
         # Phase 3: Critique Research
-        print("\n Critiquing recommendations...")
+        print_phase_header("Phase 3: Critical Analysis")
         await self._run_research_phase(mode="critique")
 
         # Phase 4: Final Recommendations
@@ -352,20 +377,6 @@ class AutonomousRedditConsensus:
 
     def print_results(self):
         """Print formatted results"""
-        print("\n" + "=" * 50)
-        print(" RECOMMENDATIONS")
-        print("=" * 50)
-
-        for i, rec in enumerate(self.state.final_recommendations, 1):
-            print(f"\n{i}. {rec.get('name', 'Recommendation')}")
-            print(f"   {rec.get('description', '')}")
-            if rec.get("pros"):
-                print(f"   ✅ Pros: {rec['pros']}")
-            if rec.get("cons"):
-                print(f"   ❌ Cons: {rec['cons']}")
-            if rec.get("reasoning"):
-                print(f"   💡 {rec['reasoning']}")
-            if rec.get("reddit_sources"):
-                print(f"   🔗 Sources: {', '.join(rec['reddit_sources'])}")
-
-        print(f"\n Process: {len(self.state.reasoning_steps)} steps")
+        print_phase_header("Final Recommendations")
+        print_recommendations_table(self.state.final_recommendations)
+        console.print(f"\n[bold]Process completed in {len(self.state.reasoning_steps)} reasoning steps[/bold]")
