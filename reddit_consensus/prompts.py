@@ -3,7 +3,7 @@ Prompt templates for the Reddit Consensus system.
 Centralizes all LLM prompts for better maintainability.
 """
 
-from .config import DEFAULT_MAX_DEPTH, DEFAULT_MAX_COMMENTS
+from .config import DEFAULT_MAX_DEPTH, DEFAULT_MAX_COMMENTS, DEFAULT_RECOMMENDATION_COUNT
 
 
 def get_reasoning_prompt(tools_description: str, original_query: str, research_data_keys: list, reasoning_steps_count: int, context: str) -> str:
@@ -71,9 +71,9 @@ For finishing:
 }}"""
 
 
-def get_draft_recommendations_prompt(original_query: str, research_data: dict, reasoning_steps: list) -> str:
+def get_draft_recommendations_prompt(original_query: str, research_data: dict, reasoning_steps: list, recommendation_count: int = DEFAULT_RECOMMENDATION_COUNT) -> str:
     """Generate the draft recommendations prompt."""
-    return f"""Based on your Reddit research so far, create 3 draft recommendations for the user.
+    return f"""Based on your Reddit research so far, create {recommendation_count} draft recommendations for the user.
 
 Original Query: {original_query}
 
@@ -81,7 +81,7 @@ Reddit Research: {research_data}
 
 Research Process: {reasoning_steps}
 
-Create 3 draft recommendations based on what you've found. These will be critiqued next.
+Create {recommendation_count} draft recommendations based on what you've found. These will be critiqued next.
 
 Focus on nuanced recommendations that capture different use cases or contexts, not just the most mentioned options.
 
@@ -145,9 +145,9 @@ For finishing critique:
 }}"""
 
 
-def get_final_recommendations_prompt(original_query: str, research_data: dict, draft_recommendations: list) -> str:
+def get_final_recommendations_prompt(original_query: str, research_data: dict, draft_recommendations: list, recommendation_count: int = DEFAULT_RECOMMENDATION_COUNT) -> str:
     """Generate the final recommendations prompt."""
-    return f"""Based on your Reddit research AND critique findings, create 3 balanced recommendations for the user.
+    return f"""Based on your Reddit research AND critique findings, create {recommendation_count} balanced recommendations for the user.
 
 Original Query: {original_query}
 
@@ -158,7 +158,7 @@ Draft Recommendations: {draft_recommendations}
 Critique Research: [Include any critique findings from additional research]
 
 Requirements:
-- Create 3 final recommendations based on ALL research (initial + critique)
+- Create {recommendation_count} final recommendations based on ALL research (initial + critique)
 - Include both positive aspects AND any discovered issues/criticisms
 - Show balanced perspective from Reddit community
 - Base everything on real Reddit comments and posts you found

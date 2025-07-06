@@ -26,6 +26,7 @@ DEFAULT_RETRY_ATTEMPTS = 3  # Number of retry attempts for failed requests
 # LLM configuration
 DEFAULT_REASONING_STEPS_LIMIT = 10  # Maximum reasoning steps before forcing finalization
 DEFAULT_MINIMUM_SOURCES = 5  # Minimum sources to collect before finalizing
+DEFAULT_RECOMMENDATION_COUNT = 3  # Default number of recommendations to generate
 
 # Reddit API Configuration
 REDDIT_ENV_VARS = {

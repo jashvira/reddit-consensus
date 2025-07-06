@@ -16,9 +16,13 @@ MODEL_NAME = "gpt-4.1"
 class AutonomousRedditConsensus:
     """Autonomous agent for Reddit consensus-driven recommendations"""
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, recommendation_count: int = None):
         self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
         self.state = AgentState()
+
+        # Import here to avoid circular imports
+        from .config import DEFAULT_RECOMMENDATION_COUNT
+        self.recommendation_count = recommendation_count or DEFAULT_RECOMMENDATION_COUNT
 
         # Single tool registry - only async functions
         self.tools = {
@@ -275,7 +279,8 @@ class AutonomousRedditConsensus:
         prompt = get_draft_recommendations_prompt(
             original_query=self.state.original_query,
             research_data=self.state.research_data,
-            reasoning_steps=self.state.reasoning_steps
+            reasoning_steps=self.state.reasoning_steps,
+            recommendation_count=self.recommendation_count
         )
 
         fallback_result = [{"name": "Error", "description": "Could not parse draft recommendations", "reasoning": "JSON parsing failed"}]
@@ -288,7 +293,8 @@ class AutonomousRedditConsensus:
         prompt = get_final_recommendations_prompt(
             original_query=self.state.original_query,
             research_data=self.state.research_data,
-            draft_recommendations=self.state.draft_recommendations
+            draft_recommendations=self.state.draft_recommendations,
+            recommendation_count=self.recommendation_count
         )
 
         fallback_result = [{"name": "Error", "description": "Could not parse recommendations", "reasoning": "JSON parsing failed"}]

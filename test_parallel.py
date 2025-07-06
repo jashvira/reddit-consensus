@@ -21,7 +21,8 @@ async def main():
     print("=" * 60)
 
     # Create recommender
-    agent = AutonomousRedditConsensus()
+    # agent = AutonomousRedditConsensus()  # Default: 3 recommendations
+    agent = AutonomousRedditConsensus(recommendation_count=5)  # Custom: 5 recommendations
 
     # Test query
     query = "best wine bars in mumbai"
