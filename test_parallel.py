@@ -7,11 +7,15 @@ Run this outside Jupyter to avoid event loop conflicts
 
 import sys
 import os
-sys.path.append('/home/jash404/agents/reddit_consensus')
+import asyncio
+
+# Add project root to path
+project_root = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, project_root)
 
 from reddit_consensus.recommender import AutonomousRedditConsensus
 
-def main():
+async def main():
     print("🚀 Testing Async Parallel Tool Execution")
     print("=" * 60)
 
@@ -20,12 +24,10 @@ def main():
 
     # Test query
     query = "Best cafes in the adelaide hills"
-    print(f"Query: {query}")
-    print("-" * 60)
 
     try:
         # Run the query
-        result = agent.process_query(query)
+        result = await agent.process_query(query)
 
         print("\n" + "=" * 60)
         print("✅ SUCCESS! Parallel execution completed")
@@ -41,4 +43,4 @@ def main():
         traceback.print_exc()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
