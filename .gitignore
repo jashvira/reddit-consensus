@@ -58,3 +58,7 @@ checkpoints/
 # Temporary files
 *.tmp
 *.temp
+
+# Documentation files to keep local only
+CLAUDE.md
+GEMINI.md
