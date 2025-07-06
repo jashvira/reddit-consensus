@@ -19,16 +19,20 @@ An autonomous AI agent that provides tasteful recommendations by analyzing Reddi
 ## Usage
 
 ```python
+import asyncio
 from reddit_consensus.recommender import AutonomousRedditConsensus
 
-agent = AutonomousRedditConsensus()
-result = agent.process_query("Best cafes in Adelaide Hills")
-agent.print_results()
+async def main():
+    agent = AutonomousRedditConsensus()
+    result = await agent.process_query("Best cafes in Adelaide Hills")
+    agent.print_results()
+
+asyncio.run(main())
 ```
 
 ## Requirements
 
-- Python 3.8+
-- OpenAI API key
-- Reddit API credentials
-- Dependencies listed in pyproject.toml
+- Python 3.11+
+- OpenAI API key (`OPENAI_API_KEY`)
+- Reddit API credentials (`REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USER_AGENT`)
+- Dependencies managed via `uv sync`
