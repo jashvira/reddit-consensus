@@ -283,12 +283,21 @@ class AutonomousRedditConsensus:
             recommendation_count=self.recommendation_count
         )
 
-        fallback_result = [{"name": "Error", "description": "Could not parse draft recommendations", "reasoning": "JSON parsing failed"}]
-        return self._call_llm_with_json_retry(prompt, fallback_result)
+        fallback_result = {
+            "recommendations": [{"name": "Error", "description": "Could not parse draft recommendations", "reasoning": "JSON parsing failed"}]
+        }
+        result = self._call_llm_with_json_retry(prompt, fallback_result)
+
+        # Handle both new structure (dict with recommendations) and old structure (list)
+        if isinstance(result, dict) and "recommendations" in result:
+            return result["recommendations"]
+        else:
+            # Fallback for old structure or error case
+            return result if isinstance(result, list) else []
 
     # ===== RECOMMENDATION GENERATION =====
 
-    def _generate_final_recommendations(self) -> List[Dict]:
+    def _generate_final_recommendations(self) -> Dict[str, Any]:
         """Generate final recommendations incorporating critique findings"""
         prompt = get_final_recommendations_prompt(
             original_query=self.state.original_query,
@@ -297,7 +306,10 @@ class AutonomousRedditConsensus:
             recommendation_count=self.recommendation_count
         )
 
-        fallback_result = [{"name": "Error", "description": "Could not parse recommendations", "reasoning": "JSON parsing failed"}]
+        fallback_result = {
+            "recommendations": [{"name": "Error", "description": "Could not parse recommendations", "reasoning": "JSON parsing failed"}],
+            "additional_notes": ""
+        }
         return self._call_llm_with_json_retry(prompt, fallback_result)
 
     # ===== PROCESSING PHASES =====
@@ -345,7 +357,17 @@ class AutonomousRedditConsensus:
     def _finalize_recommendations(self):
         """Generate and store final recommendations"""
         print_phase_header("Phase 4: Final Recommendations")
-        self.state.final_recommendations = self._generate_final_recommendations()
+        result = self._generate_final_recommendations()
+
+        # Handle both new structure (dict with recommendations + additional_notes) and old structure (list)
+        if isinstance(result, dict) and "recommendations" in result:
+            self.state.final_recommendations = result["recommendations"]
+            self.state.additional_notes = result.get("additional_notes", "")
+        else:
+            # Fallback for old structure or error case
+            self.state.final_recommendations = result if isinstance(result, list) else []
+            self.state.additional_notes = ""
+
         self.state.completed = True
 
     async def process_query(self, user_query: str) -> Dict[str, Any]:
@@ -371,6 +393,7 @@ class AutonomousRedditConsensus:
 
         return {
             "recommendations": self.state.final_recommendations,
+            "additional_notes": self.state.additional_notes,
             "steps": len(self.state.reasoning_steps),
         }
 
@@ -380,4 +403,10 @@ class AutonomousRedditConsensus:
         """Print formatted results"""
         print_phase_header("Final Recommendations")
         print_recommendations_table(self.state.final_recommendations)
+
+        # Print additional notes if available
+        if self.state.additional_notes:
+            from .colors import print_additional_notes
+            print_additional_notes(self.state.additional_notes)
+
         console.print(f"\n[bold]Process completed in {len(self.state.reasoning_steps)} reasoning steps[/bold]")

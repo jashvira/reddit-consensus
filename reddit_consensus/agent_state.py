@@ -12,6 +12,7 @@ class AgentState:
     reasoning_steps: List[str] = field(default_factory=list)
     draft_recommendations: List[Dict] = field(default_factory=list)
     final_recommendations: List[Dict] = field(default_factory=list)
+    additional_notes: str = ""
     completed: bool = False
 
     def add_reasoning_step(self, step: str):

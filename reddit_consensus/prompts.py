@@ -85,10 +85,16 @@ Create {recommendation_count} draft recommendations based on what you've found. 
 
 Focus on nuanced recommendations that capture different use cases or contexts, not just the most mentioned options.
 
-Return JSON array with objects containing:
-- name: Specific recommendation name
-- description: Brief description
-- reasoning: Why this seems good from Reddit research"""
+Return JSON object with:
+{{
+    "recommendations": [
+        {{
+            "name": "Specific recommendation name",
+            "description": "Brief description",
+            "reasoning": "Why this seems good from Reddit research"
+        }}
+    ]
+}}"""
 
 
 def get_critique_prompt(original_query: str, context: str) -> str:
@@ -165,10 +171,17 @@ Requirements:
 - Be honest about any limitations or negative feedback discovered
 - Explain when each recommendation works best and when it might not be ideal
 
-Return JSON array with objects containing:
-- name: Specific recommendation name (from Reddit)
-- description: What it is and why Reddit users recommend it
-- pros: What Reddit users love about it
-- cons: Any issues, criticisms, or downsides found (if any)
-- reasoning: Overall assessment based on Reddit community feedback
-- reddit_sources: Array of Reddit post URLs that supported this recommendation"""
+Return JSON object with:
+{{
+    "recommendations": [
+        {{
+            "name": "Specific recommendation name (from Reddit)",
+            "description": "What it is and why Reddit users recommend it",
+            "pros": "What Reddit users love about it",
+            "cons": "Any issues, criticisms, or downsides found (if any)",
+            "reasoning": "Overall assessment based on Reddit community feedback",
+            "reddit_sources": ["Array of Reddit post URLs that supported this recommendation"]
+        }}
+    ],
+    "additional_notes": "Any additional insights, general advice, warnings, or context that applies broadly but doesn't fit into specific recommendations. Include things like: general trends you noticed, timing considerations, budget advice, common mistakes to avoid, or alternative approaches that came up during research."
+}}"""

@@ -361,6 +361,22 @@ def print_phase_header(title: str, subtitle: str = "") -> None:
     header = create_header(title, subtitle)
     console.print(header)
 
+def print_additional_notes(additional_notes: str) -> None:
+    """Print additional notes section elegantly"""
+    if not additional_notes or not additional_notes.strip():
+        return
+
+    console.print()  # Add spacing
+
+    # Create panel for additional notes
+    panel = Panel(
+        additional_notes.strip(),
+        title="Additional Notes",
+        style=THEME["muted"],
+        border_style="dim"
+    )
+    console.print(panel)
+
 def print_recommendations_table(recommendations: List[Dict[str, Any]]) -> None:
     """Print recommendations in table format - alias for backward compatibility"""
     print_recommendations(recommendations)
