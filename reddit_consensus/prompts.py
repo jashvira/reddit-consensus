@@ -1,12 +1,12 @@
 """
-Prompt templates for the Tasteful Recommender system.
+Prompt templates for the Reddit Consensus system.
 Centralizes all LLM prompts for better maintainability.
 """
 
 
 def get_reasoning_prompt(tools_description: str, original_query: str, research_data_keys: list, reasoning_steps_count: int, context: str) -> str:
     """Generate the main reasoning turn prompt."""
-    return f"""You are a tasteful recommendation agent that finds great suggestions by analyzing Reddit discussions. Your goal is to discover what Reddit users are actually recommending and loving.
+    return f"""You are a Reddit consensus agent that finds great suggestions by analyzing Reddit discussions. Your goal is to discover what Reddit users are actually recommending and loving.
 
 Available tools:
 {tools_description}

@@ -19,9 +19,9 @@ An autonomous AI agent that provides tasteful recommendations by analyzing Reddi
 ## Usage
 
 ```python
-from tasteful_recommender.recommender import AutonomousTastefulRecommender
+from reddit_consensus.recommender import AutonomousRedditConsensus
 
-agent = AutonomousTastefulRecommender()
+agent = AutonomousRedditConsensus()
 result = agent.process_query("Best cafes in Adelaide Hills")
 agent.print_results()
 ```

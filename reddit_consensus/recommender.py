@@ -12,8 +12,8 @@ from prompts import get_reasoning_prompt, get_draft_recommendations_prompt, get_
 MODEL_NAME = "gpt-4.1"
 
 
-class AutonomousTastefulRecommender:
-    """Autonomous agent for taste-driven recommendations"""
+class AutonomousRedditConsensus:
+    """Autonomous agent for Reddit consensus-driven recommendations"""
 
     def __init__(self, api_key: Optional[str] = None):
         self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))

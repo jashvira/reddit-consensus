@@ -7,16 +7,16 @@ Run this outside Jupyter to avoid event loop conflicts
 
 import sys
 import os
-sys.path.append('/home/jash404/agents/tasteful_recommender')
+sys.path.append('/home/jash404/agents/reddit_consensus')
 
-from tasteful_recommender.recommender import AutonomousTastefulRecommender
+from reddit_consensus.recommender import AutonomousRedditConsensus
 
 def main():
     print("🚀 Testing Async Parallel Tool Execution")
     print("=" * 60)
 
     # Create recommender
-    agent = AutonomousTastefulRecommender()
+    agent = AutonomousRedditConsensus()
 
     # Test query
     query = "Best cafes in the adelaide hills"
