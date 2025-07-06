@@ -62,3 +62,8 @@ checkpoints/
 # Documentation files to keep local only
 CLAUDE.md
 GEMINI.md
+
+# Learning materials and scrap work
+lesson_1/
+lesson_2/
+lesson_3/
