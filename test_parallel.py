@@ -14,23 +14,24 @@ project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)
 
 from reddit_consensus.recommender import AutonomousRedditConsensus
+from reddit_consensus.colors import print_colored
 
 async def main():
-    print("🚀 Testing Async Parallel Tool Execution")
+    print_colored("TEST", "Testing Async Parallel Tool Execution")
     print("=" * 60)
 
     # Create recommender
     agent = AutonomousRedditConsensus()
 
     # Test query
-    query = "Best cafes in the adelaide hills"
+    query = "best wine bars in adelaide"
 
     try:
         # Run the query
         result = await agent.process_query(query)
 
         print("\n" + "=" * 60)
-        print("✅ SUCCESS! Parallel execution completed")
+        print_colored("SUCCESS", "Parallel execution completed")
         print(f"Total steps: {result['steps']}")
         print(f"Recommendations found: {len(result['recommendations'])}")
 
@@ -38,7 +39,7 @@ async def main():
         agent.print_results()
 
     except Exception as e:
-        print(f"\n❌ ERROR: {e}")
+        print_colored("ERROR", f"\n{e}")
         import traceback
         traceback.print_exc()
 
