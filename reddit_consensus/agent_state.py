@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
+from .colors import print_colored
 
 
 @dataclass
@@ -15,7 +16,7 @@ class AgentState:
 
     def add_reasoning_step(self, step: str):
         self.reasoning_steps.append(step)
-        print(f"🤔 {step}")
+        print_colored("STEP", step)
 
     def add_research_data(self, key: str, data: Any):
         self.research_data[key] = data

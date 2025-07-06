@@ -4,6 +4,7 @@ An autonomous AI agent that provides tasteful recommendations by analyzing Reddi
 
 ## Features
 
+- **Elegant Console UI**: Clean side-by-side dashboard with responsive layout
 - **Async Parallel Tool Execution**: Uses asyncio for fast, concurrent Reddit API calls
 - **Two-Phase Research**: Initial research followed by critical analysis
 - **Community-Driven**: Analyzes real Reddit discussions and user opinions
