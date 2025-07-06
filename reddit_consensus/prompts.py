@@ -3,6 +3,8 @@ Prompt templates for the Reddit Consensus system.
 Centralizes all LLM prompts for better maintainability.
 """
 
+from .config import DEFAULT_MAX_DEPTH, DEFAULT_MAX_COMMENTS
+
 
 def get_reasoning_prompt(tools_description: str, original_query: str, research_data_keys: list, reasoning_steps_count: int, context: str) -> str:
     """Generate the main reasoning turn prompt."""
@@ -28,10 +30,11 @@ Instructions:
 - Evaluate if commenters are locals/experts or just casual visitors (local knowledge is more valuable)
 - Only proceed with recommendations that have genuine positive community feedback
 - Focus on finding specific product names, brands, or experiences that users love
-- At least collect 5 strong sources of information.
-- Once you have enough Reddit recommendations and user opinions, finalize
+- Explore diverse sources: don't stop after finding a few popular posts, cast a wide net across different threads and time periods
+- At least collect 5 strong sources of information before finalizing
+- Once you have comprehensive Reddit consensus from multiple diverse sources, finalize
 
-Respond in JSON format. 
+Respond in JSON format.
 
 For single tool use:
 {{
@@ -50,12 +53,12 @@ For multiple tools (RECOMMENDED - much faster):
             "tool_params": {{"query": "search query 1"}}
         }},
         {{
-            "tool_name": "reddit_search_for_posts", 
-            "tool_params": {{"query": "search query 2"}}
-        }},
-        {{
             "tool_name": "reddit_get_post_comments",
             "tool_params": {{"post_id": "post_id_here"}}
+        }},
+        {{
+            "tool_name": "reddit_get_post_comments_with_tree",
+            "tool_params": {{"post_id": "post_id_here", "max_depth": {DEFAULT_MAX_DEPTH}}}
         }}
     ],
     "reasoning": "why you're using these tools together"
@@ -64,7 +67,7 @@ For multiple tools (RECOMMENDED - much faster):
 For finishing:
 {{
     "action": "finalize",
-    "reasoning": "why you're done"
+    "reasoning": "why you have enough information to make recommendations"
 }}"""
 
 
@@ -79,6 +82,8 @@ Reddit Research: {research_data}
 Research Process: {reasoning_steps}
 
 Create 3 draft recommendations based on what you've found. These will be critiqued next.
+
+Focus on nuanced recommendations that capture different use cases or contexts, not just the most mentioned options.
 
 Return JSON array with objects containing:
 - name: Specific recommendation name
@@ -99,8 +104,9 @@ Your task is to search for criticism, negative experiences, or issues with your 
 - Issues mentioned by Reddit users
 - Alternative viewpoints
 - Potential problems or downsides
+- Context-specific limitations (e.g., good for X but not Y)
 
-Search for discussions that might contradict or provide balance to your recommendations.
+Search for discussions that contradict or provide nuance. Explore multiple search angles and time periods for comprehensive criticism.
 
 Respond in JSON format.
 
@@ -127,6 +133,10 @@ For multiple tools (RECOMMENDED - critique all recommendations simultaneously):
         {{
             "tool_name": "reddit_get_post_comments",
             "tool_params": {{"post_id": "post_id_here"}}
+        }},
+        {{
+            "tool_name": "reddit_get_post_comments_with_tree",
+            "tool_params": {{"post_id": "post_id_here", "max_depth": {DEFAULT_MAX_DEPTH}}}
         }}
     ],
     "reasoning": "why you're using these tools together for critique"
@@ -157,6 +167,7 @@ Requirements:
 - Show balanced perspective from Reddit community
 - Base everything on real Reddit comments and posts you found
 - Be honest about any limitations or negative feedback discovered
+- Explain when each recommendation works best and when it might not be ideal
 
 Return JSON array with objects containing:
 - name: Specific recommendation name (from Reddit)
