@@ -1,4 +1,4 @@
-# Tasteful Recommender
+# Reddit Consensus
 
 An autonomous AI agent that provides tasteful recommendations by analyzing Reddit discussions and community feedback.
 
