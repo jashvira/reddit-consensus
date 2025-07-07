@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from typing import List, Dict, Any
+from typing import Any
+
 from .colors import print_colored
 
 
@@ -8,10 +9,10 @@ class AgentState:
     """Tracks the agent's reasoning process and gathered information"""
 
     original_query: str = ""
-    research_data: Dict[str, Any] = field(default_factory=dict)
-    reasoning_steps: List[str] = field(default_factory=list)
-    draft_recommendations: List[Dict] = field(default_factory=list)
-    final_recommendations: List[Dict] = field(default_factory=list)
+    research_data: dict[str, Any] = field(default_factory=dict)
+    reasoning_steps: list[str] = field(default_factory=list)
+    draft_recommendations: list[dict] = field(default_factory=list)
+    final_recommendations: list[dict] = field(default_factory=list)
     additional_notes: str = ""
     completed: bool = False
 

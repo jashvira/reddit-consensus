@@ -1,12 +1,19 @@
 import json
-import os
-import asyncio
+from typing import Any
+
 import asyncpraw
-from typing import Dict, Any, List
-from .config import DEFAULT_MAX_DEPTH, DEFAULT_MAX_COMMENTS, DEFAULT_REPLACE_MORE_LIMIT, get_reddit_credentials
+
+from .config import (
+    DEFAULT_MAX_COMMENTS,
+    DEFAULT_MAX_DEPTH,
+    DEFAULT_REPLACE_MORE_LIMIT,
+    get_reddit_credentials,
+)
 
 
-def _build_comment_tree(comment, max_depth: int = DEFAULT_MAX_DEPTH, current_depth: int = 0) -> Dict[str, Any]:
+def _build_comment_tree(
+    comment, max_depth: int = DEFAULT_MAX_DEPTH, current_depth: int = 0
+) -> dict[str, Any]:
     """Recursively build comment tree structure preserving Reddit hierarchy."""
     comment_data = {
         "id": comment.id,
@@ -18,15 +25,17 @@ def _build_comment_tree(comment, max_depth: int = DEFAULT_MAX_DEPTH, current_dep
         "parent_id": comment.parent_id,
         "replies": [],
         "is_expanded": False,
-        "reply_count": 0
+        "reply_count": 0,
     }
 
     # Process replies if within depth limit
-    if current_depth < max_depth and hasattr(comment, 'replies') and comment.replies:
+    if current_depth < max_depth and hasattr(comment, "replies") and comment.replies:
         try:
             for reply in comment.replies:
-                if hasattr(reply, 'body'):  # Skip MoreComments objects
-                    reply_data = _build_comment_tree(reply, max_depth, current_depth + 1)
+                if hasattr(reply, "body"):  # Skip MoreComments objects
+                    reply_data = _build_comment_tree(
+                        reply, max_depth, current_depth + 1
+                    )
                     comment_data["replies"].append(reply_data)
 
             comment_data["reply_count"] = len(comment_data["replies"])
@@ -40,7 +49,7 @@ async def reddit_get_post_comments(
     post_id: str,
     max_comments: int = DEFAULT_MAX_COMMENTS,
     max_depth: int = DEFAULT_MAX_DEPTH,
-    include_all_replies: bool = False
+    include_all_replies: bool = False,
 ) -> str:
     """Fetch comments for a Reddit post with hierarchical tree structure.
 
@@ -61,14 +70,16 @@ async def reddit_get_post_comments(
             await submission.load()
 
             # Replace "more comments" with actual comments, but limit for performance
-            await submission.comments.replace_more(limit=0 if include_all_replies else DEFAULT_REPLACE_MORE_LIMIT)
+            await submission.comments.replace_more(
+                limit=0 if include_all_replies else DEFAULT_REPLACE_MORE_LIMIT
+            )
 
             # Build comment tree
             comments_tree = []
             comment_count = 0
 
             for comment in submission.comments:
-                if hasattr(comment, 'body'):  # Skip MoreComments objects
+                if hasattr(comment, "body"):  # Skip MoreComments objects
                     comment_data = _build_comment_tree(comment, max_depth, 0)
                     comments_tree.append(comment_data)
                     comment_count += 1
@@ -76,27 +87,32 @@ async def reddit_get_post_comments(
                     if not include_all_replies and comment_count >= max_comments:
                         break
 
-            return json.dumps({
-                "post_id": post_id,
-                "post_title": submission.title,
-                "post_created_utc": submission.created_utc,
-                "post_author": str(submission.author) if submission.author else "[deleted]",
-                "status": "success",
-                "comment_tree": comments_tree,
-                "total_comments": len(comments_tree),
-                "max_depth": max_depth,
-            }, indent=2)
+            return json.dumps(
+                {
+                    "post_id": post_id,
+                    "post_title": submission.title,
+                    "post_created_utc": submission.created_utc,
+                    "post_author": str(submission.author)
+                    if submission.author
+                    else "[deleted]",
+                    "status": "success",
+                    "comment_tree": comments_tree,
+                    "total_comments": len(comments_tree),
+                    "max_depth": max_depth,
+                },
+                indent=2,
+            )
 
         except Exception as e:
-            return json.dumps({
-                "post_id": post_id,
-                "status": "error",
-                "error": str(e),
-                "comment_tree": [],
-            }, indent=2)
-
-
-
+            return json.dumps(
+                {
+                    "post_id": post_id,
+                    "status": "error",
+                    "error": str(e),
+                    "comment_tree": [],
+                },
+                indent=2,
+            )
 
 
 async def reddit_search_for_posts(
@@ -134,7 +150,9 @@ async def reddit_search_for_posts(
                             else ""
                         ),
                         "created_utc": submission.created_utc,
-                        "author": str(submission.author) if submission.author else "[deleted]",
+                        "author": str(submission.author)
+                        if submission.author
+                        else "[deleted]",
                         "subreddit": str(submission.subreddit),
                     }
                 )

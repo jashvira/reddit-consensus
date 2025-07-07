@@ -4,9 +4,10 @@ Configuration validation script for Reddit Consensus system.
 Run this to check if all required configuration is properly set up.
 """
 
-from .config import validate_config, get_reddit_credentials, REDDIT_ENV_VARS
-import sys
 import os
+import sys
+
+from .config import REDDIT_ENV_VARS, get_reddit_credentials
 
 
 def main():
@@ -15,7 +16,7 @@ def main():
 
     # Check environment variables
     missing_vars = []
-    for key, env_var in REDDIT_ENV_VARS.items():
+    for _key, env_var in REDDIT_ENV_VARS.items():
         value = os.getenv(env_var)
         if not value:
             missing_vars.append(env_var)
@@ -29,7 +30,7 @@ def main():
 
     # Try to get credentials
     try:
-        credentials = get_reddit_credentials()
+        get_reddit_credentials()
         print("Configuration valid - all credentials found")
         return True
     except ValueError as e:

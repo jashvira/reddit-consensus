@@ -3,10 +3,19 @@ Prompt templates for the Reddit Consensus system.
 Centralizes all LLM prompts for better maintainability.
 """
 
-from .config import DEFAULT_MAX_DEPTH, DEFAULT_MAX_COMMENTS, DEFAULT_RECOMMENDATION_COUNT
+from .config import (
+    DEFAULT_MAX_DEPTH,
+    DEFAULT_RECOMMENDATION_COUNT,
+)
 
 
-def get_reasoning_prompt(tools_description: str, original_query: str, research_data_keys: list, reasoning_steps_count: int, context: str) -> str:
+def get_reasoning_prompt(
+    tools_description: str,
+    original_query: str,
+    research_data_keys: list,
+    reasoning_steps_count: int,
+    context: str,
+) -> str:
     """Generate the main reasoning turn prompt."""
     return f"""You are a Reddit consensus agent that finds great suggestions by analyzing Reddit discussions. Your goal is to discover what Reddit users are actually recommending and loving.
 
@@ -71,7 +80,12 @@ For finishing:
 }}"""
 
 
-def get_draft_recommendations_prompt(original_query: str, research_data: dict, reasoning_steps: list, recommendation_count: int = DEFAULT_RECOMMENDATION_COUNT) -> str:
+def get_draft_recommendations_prompt(
+    original_query: str,
+    research_data: dict,
+    reasoning_steps: list,
+    recommendation_count: int = DEFAULT_RECOMMENDATION_COUNT,
+) -> str:
     """Generate the draft recommendations prompt."""
     return f"""Based on your Reddit research so far, create {recommendation_count} draft recommendations for the user.
 
@@ -151,7 +165,12 @@ For finishing critique:
 }}"""
 
 
-def get_final_recommendations_prompt(original_query: str, research_data: dict, draft_recommendations: list, recommendation_count: int = DEFAULT_RECOMMENDATION_COUNT) -> str:
+def get_final_recommendations_prompt(
+    original_query: str,
+    research_data: dict,
+    draft_recommendations: list,
+    recommendation_count: int = DEFAULT_RECOMMENDATION_COUNT,
+) -> str:
     """Generate the final recommendations prompt."""
     return f"""Based on your Reddit research AND critique findings, create {recommendation_count} balanced recommendations for the user.
 

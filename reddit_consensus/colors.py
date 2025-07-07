@@ -1,14 +1,18 @@
 """Clean, elegant console UI for Reddit Consensus Agent"""
 
 import json
-from typing import List, Dict, Any, Optional
 from datetime import datetime
+from typing import Any
+
 from rich.console import Console
-from rich.layout import Layout
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
-from .config import DEFAULT_UI_TREE_DISPLAY_DEPTH, DEFAULT_UI_COMMENT_PREVIEW_LENGTH, DEFAULT_UI_TITLE_PREVIEW_LENGTH
+
+from .config import (
+    DEFAULT_UI_COMMENT_PREVIEW_LENGTH,
+    DEFAULT_UI_TITLE_PREVIEW_LENGTH,
+    DEFAULT_UI_TREE_DISPLAY_DEPTH,
+)
 
 # Global console instance
 console = Console()
@@ -20,7 +24,7 @@ THEME = {
     "success": "green",
     "header": "blue",
     "neutral": "white",
-    "muted": "dim white"
+    "muted": "dim white",
 }
 
 # Tool display names
@@ -29,13 +33,16 @@ TOOL_NAMES = {
     "reddit_get_post_comments": "Fetch Comments",
 }
 
+
 def get_tool_name(tool_name: str) -> str:
     """Get clean display name for tool"""
     return TOOL_NAMES.get(tool_name, tool_name)
 
+
 def get_friendly_tool_name(tool_name: str) -> str:
     """Get friendly display name for tool - alias for backward compatibility"""
     return get_tool_name(tool_name)
+
 
 def _format_time_ago(created_utc: float) -> str:
     """Format timestamp as human-readable time ago"""
@@ -58,8 +65,9 @@ def _format_time_ago(created_utc: float) -> str:
         else:
             minutes = diff.seconds // 60
             return f"{minutes}m ago"
-    except:
+    except Exception:
         return "unknown"
+
 
 def create_header(title: str, subtitle: str = "") -> Panel:
     """Create clean header panel"""
@@ -68,9 +76,15 @@ def create_header(title: str, subtitle: str = "") -> Panel:
         content += f"\n{subtitle}"
     return Panel(content, style=f"bold {THEME['header']}", padding=(0, 1))
 
-def create_tool_table(tool_results: List[Dict[str, Any]]) -> Table:
+
+def create_tool_table(tool_results: list[dict[str, Any]]) -> Table:
     """Create compact tool execution table"""
-    table = Table(title="Tool Execution", style=THEME["primary"], show_header=True, header_style="bold")
+    table = Table(
+        title="Tool Execution",
+        style=THEME["primary"],
+        show_header=True,
+        header_style="bold",
+    )
     table.add_column("Tool", style="bold", min_width=12, max_width=20)
     table.add_column("Status", justify="center", min_width=6, max_width=8)
     table.add_column("Details", min_width=10, max_width=25)
@@ -83,7 +97,8 @@ def create_tool_table(tool_results: List[Dict[str, Any]]) -> Table:
 
     return table
 
-def _extract_details(result: Dict[str, Any]) -> str:
+
+def _extract_details(result: dict[str, Any]) -> str:
     """Extract concise details from tool result"""
     tool_name = result.get("tool_name")
     result_data = result.get("result", "")
@@ -108,29 +123,33 @@ def _extract_details(result: Dict[str, Any]) -> str:
             if "comments" in data:
                 comments = data["comments"]
                 title = data.get("post_title", "")[:15] + "..."
-                return f"{len(comments)} comments\nfrom \"{title}\""
+                return f'{len(comments)} comments\nfrom "{title}"'
             elif "comment_tree" in data:
                 comment_tree = data["comment_tree"]
                 title = data.get("post_title", "")[:15] + "..."
                 total_replies = sum(_count_replies(comment) for comment in comment_tree)
-                return f"{len(comment_tree)} comments\n+{total_replies} replies\nfrom \"{title}\""
+                return f'{len(comment_tree)} comments\n+{total_replies} replies\nfrom "{title}"'
 
         return "Completed"
-    except:
+    except Exception:
         return "Completed"
 
-def _count_replies(comment: Dict[str, Any]) -> int:
+
+def _count_replies(comment: dict[str, Any]) -> int:
     """Count total replies in a comment tree"""
     count = len(comment.get("replies", []))
     for reply in comment.get("replies", []):
         count += _count_replies(reply)
     return count
 
-def _format_comment_tree(comment: Dict[str, Any], max_display_depth: int = DEFAULT_UI_TREE_DISPLAY_DEPTH) -> List[str]:
+
+def _format_comment_tree(
+    comment: dict[str, Any], max_display_depth: int = DEFAULT_UI_TREE_DISPLAY_DEPTH
+) -> list[str]:
     """Format a comment tree with proper indentation"""
     lines = []
 
-    def format_comment_recursive(comment_data: Dict[str, Any], depth: int = 0):
+    def format_comment_recursive(comment_data: dict[str, Any], depth: int = 0):
         # Create indentation based on depth
         indent = "  " * depth
         tree_prefix = ""
@@ -141,7 +160,7 @@ def _format_comment_tree(comment: Dict[str, Any], max_display_depth: int = DEFAU
         # Format comment text
         text = comment_data.get("text", "").replace("\n", " ").strip()
         if len(text) > DEFAULT_UI_COMMENT_PREVIEW_LENGTH:
-            text = text[:DEFAULT_UI_COMMENT_PREVIEW_LENGTH - 3] + "..."
+            text = text[: DEFAULT_UI_COMMENT_PREVIEW_LENGTH - 3] + "..."
 
         author = comment_data.get("author", "unknown")
         score = comment_data.get("score", 0)
@@ -154,7 +173,7 @@ def _format_comment_tree(comment: Dict[str, Any], max_display_depth: int = DEFAU
             time_info = f" {time_ago}"
 
         # Build comment line
-        comment_line = f"{indent}{tree_prefix}\"{text}\" - {author} (↑{score}){time_info}"
+        comment_line = f'{indent}{tree_prefix}"{text}" - {author} (↑{score}){time_info}'
         if reply_count > 0 and depth < max_display_depth:
             comment_line += f" [{reply_count} replies]"
         elif reply_count > 0:
@@ -170,7 +189,8 @@ def _format_comment_tree(comment: Dict[str, Any], max_display_depth: int = DEFAU
     format_comment_recursive(comment)
     return lines
 
-def create_result_panels(tool_results: List[Dict[str, Any]]) -> List[Panel]:
+
+def create_result_panels(tool_results: list[dict[str, Any]]) -> list[Panel]:
     """Create result panels for tool outputs"""
     panels = []
 
@@ -193,7 +213,8 @@ def create_result_panels(tool_results: List[Dict[str, Any]]) -> List[Panel]:
 
     return panels
 
-def _create_search_panel(result_json: str) -> Optional[Panel]:
+
+def _create_search_panel(result_json: str) -> Panel | None:
     """Create search results panel"""
     try:
         data = json.loads(result_json)
@@ -218,7 +239,7 @@ def _create_search_panel(result_json: str) -> Optional[Panel]:
         for post in results[:3]:
             title = post.get("title", "No title")
             if len(title) > DEFAULT_UI_TITLE_PREVIEW_LENGTH:
-                title = title[:DEFAULT_UI_TITLE_PREVIEW_LENGTH - 3] + "..."
+                title = title[: DEFAULT_UI_TITLE_PREVIEW_LENGTH - 3] + "..."
             score = post.get("score", 0)
             author = post.get("author", "unknown")
 
@@ -228,15 +249,16 @@ def _create_search_panel(result_json: str) -> Optional[Panel]:
                 time_ago = _format_time_ago(post["created_utc"])
                 time_info = f" ({time_ago})"
 
-            lines.append(f"• \"{title}\" - {author} (↑{score}){time_info}")
+            lines.append(f'• "{title}" - {author} (↑{score}){time_info}')
 
         content = "\n".join(lines)
         return Panel(content, title=f'Reddit Search: "{query}"', style=THEME["primary"])
 
-    except:
+    except Exception:
         return None
 
-def _create_hierarchical_comments_panel(result_json: str) -> Optional[Panel]:
+
+def _create_hierarchical_comments_panel(result_json: str) -> Panel | None:
     """Create hierarchical comments panel with tree structure"""
     try:
         data = json.loads(result_json)
@@ -245,7 +267,7 @@ def _create_hierarchical_comments_panel(result_json: str) -> Optional[Panel]:
 
         post_title = data.get("post_title", "Unknown Post")
         if len(post_title) > DEFAULT_UI_TITLE_PREVIEW_LENGTH - 5:
-            post_title = post_title[:DEFAULT_UI_TITLE_PREVIEW_LENGTH - 8] + "..."
+            post_title = post_title[: DEFAULT_UI_TITLE_PREVIEW_LENGTH - 8] + "..."
 
         comment_tree = data["comment_tree"]
         max_depth = data.get("max_depth", 3)
@@ -262,7 +284,10 @@ def _create_hierarchical_comments_panel(result_json: str) -> Optional[Panel]:
             post_info = f" by {post_author} ({post_time_ago})"
 
         # Build content
-        lines = [f"{total_comments} comments with {total_replies} replies (depth: {max_depth})", ""]
+        lines = [
+            f"{total_comments} comments with {total_replies} replies (depth: {max_depth})",
+            "",
+        ]
         if post_info:
             lines.append(f"Post{post_info}")
             lines.append("")
@@ -278,12 +303,15 @@ def _create_hierarchical_comments_panel(result_json: str) -> Optional[Panel]:
             lines.append(f"... and {len(comment_tree) - 3} more comment threads")
 
         content = "\n".join(lines)
-        return Panel(content, title=f'Comment Tree: "{post_title}"', style=THEME["accent"])
+        return Panel(
+            content, title=f'Comment Tree: "{post_title}"', style=THEME["accent"]
+        )
 
-    except:
+    except Exception:
         return None
 
-def _create_comments_panel(result_json: str) -> Optional[Panel]:
+
+def _create_comments_panel(result_json: str) -> Panel | None:
     """Create comments panel"""
     try:
         data = json.loads(result_json)
@@ -292,7 +320,7 @@ def _create_comments_panel(result_json: str) -> Optional[Panel]:
 
         post_title = data.get("post_title", "Unknown Post")
         if len(post_title) > DEFAULT_UI_TITLE_PREVIEW_LENGTH - 5:
-            post_title = post_title[:DEFAULT_UI_TITLE_PREVIEW_LENGTH - 8] + "..."
+            post_title = post_title[: DEFAULT_UI_TITLE_PREVIEW_LENGTH - 8] + "..."
 
         comments = data["comments"]
 
@@ -313,7 +341,7 @@ def _create_comments_panel(result_json: str) -> Optional[Panel]:
         for comment in comments[:3]:
             text = comment.get("text", "").replace("\n", " ").strip()
             if len(text) > DEFAULT_UI_COMMENT_PREVIEW_LENGTH - 15:
-                text = text[:DEFAULT_UI_COMMENT_PREVIEW_LENGTH - 18] + "..."
+                text = text[: DEFAULT_UI_COMMENT_PREVIEW_LENGTH - 18] + "..."
             score = comment.get("score", 0)
             author = comment.get("author", "unknown")
 
@@ -323,21 +351,19 @@ def _create_comments_panel(result_json: str) -> Optional[Panel]:
                 time_ago = _format_time_ago(comment["created_utc"])
                 time_info = f" ({time_ago})"
 
-            lines.append(f"• \"{text}\" - {author} (↑{score}){time_info}")
+            lines.append(f'• "{text}" - {author} (↑{score}){time_info}')
 
         content = "\n".join(lines)
         return Panel(content, title=f'Comments: "{post_title}"', style=THEME["accent"])
 
-    except:
+    except Exception:
         return None
 
-def render_dashboard(tool_results: List[Dict[str, Any]]) -> None:
+
+def render_dashboard(tool_results: list[dict[str, Any]]) -> None:
     """Render elegant dashboard with tool results"""
     if not tool_results:
         return
-
-    # Create layout
-    layout = Layout()
 
     # Create panels
     tool_table = create_tool_table(tool_results)
@@ -350,16 +376,19 @@ def render_dashboard(tool_results: List[Dict[str, Any]]) -> None:
     for panel in result_panels:
         console.print(panel)
 
+
 def print_colored(label: str, message: str, color: str = None) -> None:
     """Print colored message with label"""
     if color is None:
         color = THEME.get(label.lower(), THEME["neutral"])
     console.print(f"[{color}][{label}][/{color}] {message}")
 
+
 def print_phase_header(title: str, subtitle: str = "") -> None:
     """Print phase header with elegant formatting"""
     header = create_header(title, subtitle)
     console.print(header)
+
 
 def print_additional_notes(additional_notes: str) -> None:
     """Print additional notes section elegantly"""
@@ -373,15 +402,17 @@ def print_additional_notes(additional_notes: str) -> None:
         additional_notes.strip(),
         title="Additional Notes",
         style=THEME["muted"],
-        border_style="dim"
+        border_style="dim",
     )
     console.print(panel)
 
-def print_recommendations_table(recommendations: List[Dict[str, Any]]) -> None:
+
+def print_recommendations_table(recommendations: list[dict[str, Any]]) -> None:
     """Print recommendations in table format - alias for backward compatibility"""
     print_recommendations(recommendations)
 
-def print_recommendations(recommendations: List[Dict[str, Any]]) -> None:
+
+def print_recommendations(recommendations: list[dict[str, Any]]) -> None:
     """Print final recommendations elegantly"""
     if not recommendations:
         return
@@ -390,38 +421,52 @@ def print_recommendations(recommendations: List[Dict[str, Any]]) -> None:
         title = f"{i}. {rec.get('name', 'Recommendation')}"
 
         lines = []
-        if rec.get('description'):
-            lines.append(rec['description'])
+        if rec.get("description"):
+            lines.append(rec["description"])
 
-        if rec.get('pros'):
-            lines.append(f"\n[{THEME['success']}]✓ Pros:[/{THEME['success']}] {rec['pros']}")
+        if rec.get("pros"):
+            lines.append(
+                f"\n[{THEME['success']}]✓ Pros:[/{THEME['success']}] {rec['pros']}"
+            )
 
-        if rec.get('cons'):
-            lines.append(f"[{THEME['accent']}]! Cons:[/{THEME['accent']}] {rec['cons']}")
+        if rec.get("cons"):
+            lines.append(
+                f"[{THEME['accent']}]! Cons:[/{THEME['accent']}] {rec['cons']}"
+            )
 
-        if rec.get('reasoning'):
-            lines.append(f"\n[{THEME['neutral']}]• Reasoning:[/{THEME['neutral']}] {rec['reasoning']}")
+        if rec.get("reasoning"):
+            lines.append(
+                f"\n[{THEME['neutral']}]• Reasoning:[/{THEME['neutral']}] {rec['reasoning']}"
+            )
 
-        if rec.get('reddit_sources'):
-            sources = ', '.join(rec['reddit_sources'])
-            lines.append(f"\n[{THEME['primary']}]• Sources:[/{THEME['primary']}] {sources}")
+        if rec.get("reddit_sources"):
+            sources = ", ".join(rec["reddit_sources"])
+            lines.append(
+                f"\n[{THEME['primary']}]• Sources:[/{THEME['primary']}] {sources}"
+            )
 
         content = "\n".join(lines)
         panel = Panel(content, title=title, style=THEME["neutral"])
         console.print(panel)
 
-def print_tools_with_results(tool_results: List[Dict[str, Any]], title: str = "") -> None:
+
+def print_tools_with_results(
+    tool_results: list[dict[str, Any]], title: str = ""
+) -> None:
     """Legacy function - use render_dashboard instead"""
     render_dashboard(tool_results)
+
 
 # Unused legacy functions - keeping for compatibility
 def print_tool_table(tool_results: list, title: str = "Tool Execution") -> None:
     console.print(create_tool_table(tool_results))
 
+
 def print_post_search_results(result_json: str) -> None:
     panel = _create_search_panel(result_json)
     if panel:
         console.print(panel)
+
 
 def print_comment_search_results(result_json: str) -> None:
     panel = _create_comments_panel(result_json)

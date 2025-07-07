@@ -1,28 +1,46 @@
-import os
-import json
 import asyncio
-from typing import Dict, Any, List, Optional
+import json
+import os
+from typing import Any
+
 from openai import OpenAI
 
 from .agent_state import AgentState
-from .tools import reddit_search_for_posts, reddit_get_post_comments
-from .prompts import get_reasoning_prompt, get_draft_recommendations_prompt, get_critique_prompt, get_final_recommendations_prompt
-from .colors import print_colored, print_phase_header, print_recommendations_table, render_dashboard, console
-
-# Global model configuration
-MODEL_NAME = "gpt-4.1"
+from .colors import (
+    console,
+    print_colored,
+    print_phase_header,
+    print_recommendations_table,
+    render_dashboard,
+)
+from .prompts import (
+    get_critique_prompt,
+    get_draft_recommendations_prompt,
+    get_final_recommendations_prompt,
+    get_reasoning_prompt,
+)
+from .tools import reddit_get_post_comments, reddit_search_for_posts
 
 
 class AutonomousRedditConsensus:
     """Autonomous agent for Reddit consensus-driven recommendations"""
 
-    def __init__(self, api_key: Optional[str] = None, recommendation_count: int = None):
+    def __init__(self, api_key: str | None = None, recommendation_count: int = None):
         self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
         self.state = AgentState()
 
         # Import here to avoid circular imports
-        from .config import DEFAULT_RECOMMENDATION_COUNT
+        from .config import (
+            DEFAULT_MODEL_MAX_TOKENS,
+            DEFAULT_MODEL_NAME,
+            DEFAULT_RECOMMENDATION_COUNT,
+        )
+
         self.recommendation_count = recommendation_count or DEFAULT_RECOMMENDATION_COUNT
+
+        # Use simple config defaults
+        self.model_name = DEFAULT_MODEL_NAME
+        self.model_max_tokens = DEFAULT_MODEL_MAX_TOKENS
 
         # Single tool registry - only async functions
         self.tools = {
@@ -40,7 +58,7 @@ class AutonomousRedditConsensus:
         for name, func in self.tools.items():
             # Extract first line of docstring as description
             if func.__doc__:
-                desc = func.__doc__.strip().split('\n')[0]
+                desc = func.__doc__.strip().split("\n")[0]
             else:
                 desc = "No description available"
             descriptions.append(f"- {name}: {desc}")
@@ -51,16 +69,17 @@ class AutonomousRedditConsensus:
         for attempt in range(2):
             try:
                 response = self.client.chat.completions.create(
-                    model=MODEL_NAME,
+                    model=self.model_name,
                     messages=[{"role": "user", "content": prompt}],
+                    max_tokens=self.model_max_tokens,
                 )
 
                 content = response.choices[0].message.content.strip()
 
                 # Remove any markdown code blocks if present
-                if content.startswith('```json'):
+                if content.startswith("```json"):
                     content = content[7:-3].strip()
-                elif content.startswith('```'):
+                elif content.startswith("```"):
                     content = content[3:-3].strip()
 
                 parsed = json.loads(content)
@@ -80,9 +99,12 @@ class AutonomousRedditConsensus:
 
         return fallback_result
 
-    def _log_tool_start(self, tool_name: str, params: Dict[str, Any], prefix: str = "") -> None:
+    def _log_tool_start(
+        self, tool_name: str, params: dict[str, Any], prefix: str = ""
+    ) -> None:
         """Log tool execution start with parameters"""
         from .colors import get_friendly_tool_name
+
         friendly_name = get_friendly_tool_name(tool_name)
         print_colored("TOOL", f"{prefix}Using: {friendly_name}")
 
@@ -90,7 +112,7 @@ class AutonomousRedditConsensus:
         if tool_name == "reddit_search_for_posts":
             print_colored("SEARCH", f"{prefix}Search: {params.get('query', 'N/A')}")
         elif tool_name == "reddit_get_post_comments":
-            post_id = params.get('post_id', 'N/A')
+            post_id = params.get("post_id", "N/A")
             post_title = self._find_post_title(post_id)
             print_colored("POST", f"{prefix}Post: {post_title[:80]}...")
 
@@ -100,41 +122,59 @@ class AutonomousRedditConsensus:
             result_data = json.loads(result)
             if tool_name == "reddit_search_for_posts" and "results" in result_data:
                 print(f"   {prefix}Found {len(result_data['results'])} posts:")
-                for post in result_data['results'][:3]:  # Show first 3
+                for post in result_data["results"][:3]:  # Show first 3
                     print(f"   {prefix}• {post.get('title', 'No title')[:80]}...")
             elif tool_name == "reddit_get_post_comments" and "comments" in result_data:
                 print(f"   {prefix}Found {len(result_data['comments'])} comments")
-                if result_data.get('post_title'):
+                if result_data.get("post_title"):
                     print(f"   {prefix}Post: {result_data['post_title'][:80]}...")
-            elif tool_name == "reddit_get_post_comments" and "comment_tree" in result_data:
-                comment_tree = result_data['comment_tree']
-                total_replies = sum(self._count_replies(comment) for comment in comment_tree)
-                print(f"   {prefix}Found {len(comment_tree)} comments with {total_replies} replies")
-                if result_data.get('post_title'):
+            elif (
+                tool_name == "reddit_get_post_comments"
+                and "comment_tree" in result_data
+            ):
+                comment_tree = result_data["comment_tree"]
+                total_replies = sum(
+                    self._count_replies(comment) for comment in comment_tree
+                )
+                print(
+                    f"   {prefix}Found {len(comment_tree)} comments with {total_replies} replies"
+                )
+                if result_data.get("post_title"):
                     print(f"   {prefix}Post: {result_data['post_title'][:80]}...")
         except (json.JSONDecodeError, KeyError):
             pass
 
-    def _count_replies(self, comment: Dict[str, Any]) -> int:
+    def _count_replies(self, comment: dict[str, Any]) -> int:
         """Count total replies in a comment tree"""
         count = len(comment.get("replies", []))
         for reply in comment.get("replies", []):
             count += self._count_replies(reply)
         return count
 
-    def _normalize_tool_requests(self, decision: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _normalize_tool_requests(
+        self, decision: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """Normalize single or multiple tool requests to consistent list format"""
         if decision.get("action") == "use_tool":
-            return [{
-                "tool_name": decision.get("tool_name"),
-                "tool_params": decision.get("tool_params", {})
-            }]
+            return [
+                {
+                    "tool_name": decision.get("tool_name"),
+                    "tool_params": decision.get("tool_params", {}),
+                }
+            ]
         elif decision.get("action") == "use_tools":
             return decision.get("tools", [])
         else:
             return []
 
-    def _store_tool_results(self, results: List[Dict[str, Any]], mode: str, iteration: int, prefix: str, context: str) -> str:
+    def _store_tool_results(
+        self,
+        results: list[dict[str, Any]],
+        mode: str,
+        iteration: int,
+        prefix: str,
+        context: str,
+    ) -> str:
         """Store tool execution results with consistent key generation"""
         for tool_result in results:
             tool_name = tool_result["tool_name"]
@@ -155,17 +195,20 @@ class AutonomousRedditConsensus:
 
     # ===== REASONING TURNS =====
 
-    def _reasoning_turn(self, context: str) -> Dict[str, Any]:
+    def _reasoning_turn(self, context: str) -> dict[str, Any]:
         """Execute one reasoning turn"""
         prompt = get_reasoning_prompt(
             tools_description=self._get_tools_description(),
             original_query=self.state.original_query,
             research_data_keys=list(self.state.research_data.keys()),
             reasoning_steps_count=len(self.state.reasoning_steps),
-            context=context
+            context=context,
         )
 
-        fallback_result = {"action": "finalize", "reasoning": "JSON parse error, finalizing"}
+        fallback_result = {
+            "action": "finalize",
+            "reasoning": "JSON parse error, finalizing",
+        }
         parsed = self._call_llm_with_json_retry(prompt, fallback_result)
 
         if not isinstance(parsed, dict) or "action" not in parsed:
@@ -173,15 +216,16 @@ class AutonomousRedditConsensus:
             return {"action": "finalize", "reasoning": "Invalid response format"}
         return parsed
 
-
-    def _critique_turn(self, context: str) -> Dict[str, Any]:
+    def _critique_turn(self, context: str) -> dict[str, Any]:
         """Execute one critique reasoning turn"""
         prompt = get_critique_prompt(
-            original_query=self.state.original_query,
-            context=context
+            original_query=self.state.original_query, context=context
         )
 
-        fallback_result = {"action": "finalize", "reasoning": "JSON parse error, finalizing"}
+        fallback_result = {
+            "action": "finalize",
+            "reasoning": "JSON parse error, finalizing",
+        }
         parsed = self._call_llm_with_json_retry(prompt, fallback_result)
 
         if not isinstance(parsed, dict) or "action" not in parsed:
@@ -191,7 +235,7 @@ class AutonomousRedditConsensus:
 
     # ===== TOOL EXECUTION =====
 
-    async def _execute_single_tool(self, tool_name: str, params: Dict[str, Any]) -> str:
+    async def _execute_single_tool(self, tool_name: str, params: dict[str, Any]) -> str:
         """Execute a single tool without logging"""
         if tool_name not in self.tools:
             return f"Tool {tool_name} not found"
@@ -201,11 +245,17 @@ class AutonomousRedditConsensus:
         except Exception as e:
             return f"Error: {str(e)}"
 
-    async def _execute_tools(self, tool_requests: List[Dict[str, Any]],
-                            log_results: bool = True, prefix: str = "") -> List[Dict[str, Any]]:
+    async def _execute_tools(
+        self,
+        tool_requests: list[dict[str, Any]],
+        log_results: bool = True,
+        prefix: str = "",
+    ) -> list[dict[str, Any]]:
         """Execute tools (single or multiple) with optional logging"""
         if log_results and len(tool_requests) > 1:
-            print_colored("PARALLEL", f"{prefix}Using {len(tool_requests)} tools in parallel")
+            print_colored(
+                "PARALLEL", f"{prefix}Using {len(tool_requests)} tools in parallel"
+            )
 
         tasks = []
         for i, tool_request in enumerate(tool_requests):
@@ -222,7 +272,9 @@ class AutonomousRedditConsensus:
 
         # Execute all tasks in parallel
         results = []
-        completed_tasks = await asyncio.gather(*[task for _, _, _, task in tasks], return_exceptions=True)
+        completed_tasks = await asyncio.gather(
+            *[task for _, _, _, task in tasks], return_exceptions=True
+        )
 
         # Process results and maintain order
         for i, (original_index, tool_name, params, _) in enumerate(tasks):
@@ -238,12 +290,15 @@ class AutonomousRedditConsensus:
                 else:
                     # Multiple tools - log completion status and results
                     from .colors import get_friendly_tool_name
+
                     friendly_name = get_friendly_tool_name(tool_name)
-                    console.print(f"   [green][DONE][/green] {prefix}{friendly_name}: ", end="")
+                    console.print(
+                        f"   [green][DONE][/green] {prefix}{friendly_name}: ", end=""
+                    )
                     if tool_name == "reddit_search_for_posts":
                         console.print(f"'{params.get('query', 'N/A')}'")
                     elif tool_name == "reddit_get_post_comments":
-                        post_id = params.get('post_id', 'N/A')
+                        post_id = params.get("post_id", "N/A")
                         post_title = self._find_post_title(post_id)
                         console.print(f"'{post_title[:50]}...'")
                     else:
@@ -251,12 +306,14 @@ class AutonomousRedditConsensus:
 
                     self._log_tool_results(tool_name, result, prefix)
 
-            results.append({
-                "tool_name": tool_name,
-                "tool_params": params,
-                "result": result,
-                "index": original_index
-            })
+            results.append(
+                {
+                    "tool_name": tool_name,
+                    "tool_params": params,
+                    "result": result,
+                    "index": original_index,
+                }
+            )
 
         return sorted(results, key=lambda x: x["index"])
 
@@ -273,18 +330,23 @@ class AutonomousRedditConsensus:
                 continue
         return "Unknown Post"
 
-
-    def _generate_draft_recommendations(self) -> List[Dict]:
+    def _generate_draft_recommendations(self) -> list[dict]:
         """Generate draft recommendations for critique"""
         prompt = get_draft_recommendations_prompt(
             original_query=self.state.original_query,
             research_data=self.state.research_data,
             reasoning_steps=self.state.reasoning_steps,
-            recommendation_count=self.recommendation_count
+            recommendation_count=self.recommendation_count,
         )
 
         fallback_result = {
-            "recommendations": [{"name": "Error", "description": "Could not parse draft recommendations", "reasoning": "JSON parsing failed"}]
+            "recommendations": [
+                {
+                    "name": "Error",
+                    "description": "Could not parse draft recommendations",
+                    "reasoning": "JSON parsing failed",
+                }
+            ]
         }
         result = self._call_llm_with_json_retry(prompt, fallback_result)
 
@@ -297,18 +359,24 @@ class AutonomousRedditConsensus:
 
     # ===== RECOMMENDATION GENERATION =====
 
-    def _generate_final_recommendations(self) -> Dict[str, Any]:
+    def _generate_final_recommendations(self) -> dict[str, Any]:
         """Generate final recommendations incorporating critique findings"""
         prompt = get_final_recommendations_prompt(
             original_query=self.state.original_query,
             research_data=self.state.research_data,
             draft_recommendations=self.state.draft_recommendations,
-            recommendation_count=self.recommendation_count
+            recommendation_count=self.recommendation_count,
         )
 
         fallback_result = {
-            "recommendations": [{"name": "Error", "description": "Could not parse recommendations", "reasoning": "JSON parsing failed"}],
-            "additional_notes": ""
+            "recommendations": [
+                {
+                    "name": "Error",
+                    "description": "Could not parse recommendations",
+                    "reasoning": "JSON parsing failed",
+                }
+            ],
+            "additional_notes": "",
         }
         return self._call_llm_with_json_retry(prompt, fallback_result)
 
@@ -338,9 +406,11 @@ class AutonomousRedditConsensus:
                 tool_requests = self._normalize_tool_requests(decision)
 
                 # Execute tools (single or multiple)
-                results = await self._execute_tools(tool_requests, log_results=False, prefix=prefix)
+                results = await self._execute_tools(
+                    tool_requests, log_results=False, prefix=prefix
+                )
 
-                                # Show results in elegant dashboard layout
+                # Show results in elegant dashboard layout
                 render_dashboard(results)
 
                 # Store results with unified logic
@@ -351,8 +421,6 @@ class AutonomousRedditConsensus:
                 break
 
         return context
-
-
 
     def _finalize_recommendations(self):
         """Generate and store final recommendations"""
@@ -365,14 +433,21 @@ class AutonomousRedditConsensus:
             self.state.additional_notes = result.get("additional_notes", "")
         else:
             # Fallback for old structure or error case
-            self.state.final_recommendations = result if isinstance(result, list) else []
+            self.state.final_recommendations = (
+                result if isinstance(result, list) else []
+            )
             self.state.additional_notes = ""
 
         self.state.completed = True
 
-    async def process_query(self, user_query: str) -> Dict[str, Any]:
+    async def process_query(self, user_query: str) -> dict[str, Any]:
         """Main processing method - orchestrates the full recommendation pipeline"""
-        print_phase_header("Reddit Consensus Agent", f"Processing: {user_query[:100]}...")
+        print_phase_header(
+            "Reddit Consensus Agent", f"Processing: {user_query[:100]}..."
+        )
+
+        # Show current configuration
+        print_colored("USING", f"{self.model_name}")
 
         # Setup
         self.state.original_query = user_query
@@ -407,6 +482,9 @@ class AutonomousRedditConsensus:
         # Print additional notes if available
         if self.state.additional_notes:
             from .colors import print_additional_notes
+
             print_additional_notes(self.state.additional_notes)
 
-        console.print(f"\n[bold]Process completed in {len(self.state.reasoning_steps)} reasoning steps[/bold]")
+        console.print(
+            f"\n[bold]Process completed in {len(self.state.reasoning_steps)} reasoning steps[/bold]"
+        )

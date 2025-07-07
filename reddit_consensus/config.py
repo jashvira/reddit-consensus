@@ -4,7 +4,6 @@ Centralized configuration for easy maintenance and tuning.
 """
 
 import os
-from typing import Dict
 
 # Comment tree depth configuration
 DEFAULT_MAX_DEPTH = 3  # Maximum depth for comment tree traversal
@@ -24,15 +23,19 @@ DEFAULT_TIMEOUT_SECONDS = 30  # Default timeout for Reddit API calls
 DEFAULT_RETRY_ATTEMPTS = 3  # Number of retry attempts for failed requests
 
 # LLM configuration
-DEFAULT_REASONING_STEPS_LIMIT = 10  # Maximum reasoning steps before forcing finalization
+DEFAULT_REASONING_STEPS_LIMIT = (
+    10  # Maximum reasoning steps before forcing finalization
+)
 DEFAULT_MINIMUM_SOURCES = 5  # Minimum sources to collect before finalizing
 DEFAULT_RECOMMENDATION_COUNT = 3  # Default number of recommendations to generate
+DEFAULT_MODEL_NAME = "gpt-4.1"  # Default OpenAI model to use
+DEFAULT_MODEL_MAX_TOKENS = 4000  # Maximum tokens for model responses
 
 # Reddit API Configuration
 REDDIT_ENV_VARS = {
     "client_id": "REDDIT_CLIENT_ID",
     "client_secret": "REDDIT_CLIENT_SECRET",
-    "user_agent": "REDDIT_USER_AGENT"
+    "user_agent": "REDDIT_USER_AGENT",
 }
 
 # Reddit API Default Values (for development/testing)
@@ -40,7 +43,8 @@ REDDIT_DEFAULTS = {
     "user_agent": "RedditConsensus/1.0 (by /u/your_username)"  # Fallback user agent
 }
 
-def get_reddit_credentials() -> Dict[str, str]:
+
+def get_reddit_credentials() -> dict[str, str]:
     """Get Reddit API credentials from environment variables.
 
     Centralized credential management with clear error messages.
@@ -73,6 +77,7 @@ def get_reddit_credentials() -> Dict[str, str]:
         )
 
     return credentials
+
 
 # Validation functions
 def validate_config() -> bool:
