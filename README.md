@@ -6,6 +6,7 @@
 
 *An autonomous AI agent that provides tasteful insights by analyzing Reddit discussions and community feedback.*
 
+[![PyPI version](https://badge.fury.io/py/reddit-consensus.svg)](https://badge.fury.io/py/reddit-consensus)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Rich Console](https://img.shields.io/badge/UI-Rich%20Console-orange.svg)](https://github.com/Textualize/rich)
@@ -32,8 +33,23 @@
 
 ## Quick Start
 
+### Installation
+```bash
+# Install from PyPI
+pip install reddit-consensus
+
+# Or clone and install from source
+git clone https://github.com/jashvira/reddit-consensus.git
+cd reddit-consensus
+uv sync
+```
+
 ### Interactive Session (Recommended)
 ```bash
+# If installed from PyPI
+ask-reddit
+
+# If running from source
 python ask_reddit.py
 ```
 

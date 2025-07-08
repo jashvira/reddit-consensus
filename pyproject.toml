@@ -3,7 +3,7 @@ name = "reddit-consensus"
 version = "0.1.0"
 description = "Autonomous AI agent for tasteful recommendations via Reddit community analysis"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
 authors = [
     {name = "Jash Vira", email = "jashvira2001404@gmail.com"}
 ]
@@ -15,7 +15,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
@@ -47,10 +46,10 @@ notebook = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-username/reddit-consensus"
-Repository = "https://github.com/your-username/reddit-consensus.git"
-Documentation = "https://github.com/your-username/reddit-consensus#readme"
-"Bug Tracker" = "https://github.com/your-username/reddit-consensus/issues"
+Homepage = "https://github.com/jashvira/reddit-consensus"
+Repository = "https://github.com/jashvira/reddit-consensus.git"
+Documentation = "https://github.com/jashvira/reddit-consensus#readme"
+"Bug Tracker" = "https://github.com/jashvira/reddit-consensus/issues"
 
 [project.scripts]
 ask-reddit = "ask_reddit:main"
@@ -92,3 +91,7 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["reddit_consensus*"]
