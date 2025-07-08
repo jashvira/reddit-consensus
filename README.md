@@ -4,7 +4,7 @@
 
 # Reddit Consensus Agent
 
-*An autonomous AI agent that provides tasteful recommendations by analyzing Reddit discussions and community feedback.*
+*An autonomous AI agent that provides tasteful insights by analyzing Reddit discussions and community feedback.*
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
@@ -20,7 +20,7 @@
 - **Async Parallel Tool Execution**: Uses asyncio for fast, concurrent Reddit API calls
 - **Two-Phase Research**: Initial research followed by critical analysis
 - **Community-Driven**: Analyzes real Reddit discussions and user opinions
-- **Balanced Recommendations**: Provides both pros and cons based on community feedback
+- **Balanced Insights**: Provides both pros and cons based on community feedback
 
 ## Architecture
 
@@ -38,10 +38,10 @@ python ask_reddit.py
 
 The interactive session will:
 1. Check your API keys (or help you enter them)
-2. Ask what you'd like recommendations for
+2. Ask what you'd like insights on
 3. Analyze Reddit discussions with elegant dashboard
-4. Show balanced recommendations with pros/cons
-5. Offer to answer another question
+4. Show balanced insights with pros/cons
+5. Offer to answer another query
 
 ### Programmatic Usage
 ```python
