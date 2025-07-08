@@ -10,6 +10,10 @@ DEFAULT_MAX_DEPTH = 3  # Maximum depth for comment tree traversal
 DEFAULT_MAX_COMMENTS = 5  # Maximum number of comments/posts to fetch by default
 DEFAULT_REPLACE_MORE_LIMIT = 3  # Limit for replacing "more comments" objects
 
+# Comment filtering configuration
+DEFAULT_SORT_BY_SCORE = True  # Sort comments by score (upvotes) instead of chronological
+DEFAULT_ADAPTIVE_PERCENTILE = 80  # Filter bottom X% of comments by score
+
 # Search configuration
 DEFAULT_SEARCH_RESULTS = 5  # Default number of search results to return
 
@@ -28,8 +32,18 @@ DEFAULT_REASONING_STEPS_LIMIT = (
 )
 DEFAULT_MINIMUM_SOURCES = 5  # Minimum sources to collect before finalizing
 DEFAULT_RECOMMENDATION_COUNT = 3  # Default number of recommendations to generate
-DEFAULT_MODEL_NAME = "gpt-4.1"  # Default OpenAI model to use
+DEFAULT_MODEL_NAME = "gpt-4.1-mini"  # Default OpenAI model to use
 DEFAULT_MODEL_MAX_TOKENS = 4000  # Maximum tokens for model responses
+
+# Request pacing configuration (NOT token rate limiting)
+DEFAULT_REQUEST_DELAY = 0.1  # Minimum seconds between API requests
+DEFAULT_SUMMARIZATION_TRIGGER_TOKENS = 15000  # Start summarization at 15K tokens (more aggressive)
+DEFAULT_PROMPT_HARD_LIMIT = 28000  # Maximum prompt size before rejection
+
+# Summarization model configuration
+DEFAULT_SUMMARIZATION_MODEL = "gpt-4.1-mini"  # Model for research data summarization
+DEFAULT_SUMMARIZATION_MAX_TOKENS = 1000  # Max tokens for summary responses (increased for better compression)
+# Summarization configuration uses same request pacing as main model
 
 # Reddit API Configuration
 REDDIT_ENV_VARS = {
