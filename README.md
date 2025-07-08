@@ -21,6 +21,7 @@
 - **Two-Phase Research**: Initial research followed by critical analysis
 - **Community-Driven**: Analyzes real Reddit discussions and user opinions
 - **Balanced Insights**: Provides both pros and cons based on community feedback
+- **Configurable AI Models**: Uses `gpt-4.1-mini` by default, but supports other OpenAI models via [`config.py`](reddit_consensus/config.py)
 
 ## Architecture
 
