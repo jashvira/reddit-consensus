@@ -2,7 +2,7 @@
 
 """
 Reddit Consensus Agent - Interactive Session
-Ask Reddit for recommendations and get balanced insights from community discussions.
+Ask Reddit for insights and get balanced perspectives from community discussions.
 """
 
 import asyncio
@@ -96,8 +96,8 @@ def setup_reddit_keys():
     return True
 
 
-async def ask_question():
-    """Get user question and process it"""
+async def ask_query():
+    """Get user query and process it"""
     console.print()
 
     # Create input prompt panel
@@ -109,10 +109,10 @@ async def ask_question():
     )
     console.print(prompt_panel)
 
-    query = Prompt.ask("[bold]Your question[/bold]", console=console).strip()
+    query = Prompt.ask("[bold]Your query:[/bold]", console=console).strip()
 
     if not query:
-        print("Please enter a question to get recommendations.")
+        print("Please enter a query to get insights.")
         return False
 
     print()
@@ -128,7 +128,7 @@ async def ask_question():
         # Show summary
         print()
         console.print(
-            f"[bold]✓ Found {len(result['recommendations'])} recommendations | "
+            f"[bold]✓ Found {len(result['recommendations'])} insights | "
             f"{result['steps']} reasoning steps[/bold]"
         )
 
@@ -144,7 +144,7 @@ def ask_continue():
     print()
     while True:
         response = Prompt.ask(
-            "\n[bold green]Ask another question?[/bold green]",
+            "\n[bold green]Ask another query?[/bold green]",
             choices=["y", "n"],
             default="y",
         ).lower()
@@ -165,9 +165,9 @@ async def main():
     print()
     print_colored("SUCCESS", "Ready to analyze Reddit discussions!")
 
-    # Main question loop
+    # Main query loop
     while True:
-        success = await ask_question()
+        success = await ask_query()
 
         if success and ask_continue():
             continue
