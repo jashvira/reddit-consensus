@@ -23,7 +23,7 @@ from .tools import reddit_get_post_comments, reddit_search_for_posts
 
 
 class AutonomousRedditConsensus:
-    """Autonomous agent for Reddit consensus-driven recommendations"""
+    """Autonomous agent for Reddit consensus-driven insights"""
 
     def __init__(self, api_key: str | None = None, recommendation_count: int = None):
         self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
@@ -41,6 +41,11 @@ class AutonomousRedditConsensus:
         # Use simple config defaults
         self.model_name = DEFAULT_MODEL_NAME
         self.model_max_tokens = DEFAULT_MODEL_MAX_TOKENS
+        
+        # Simple token tracking 
+        self.total_tokens_sent = 0  # What we upload to the model
+        self.total_tokens_received = 0  # What model generates back
+
 
         # Single tool registry - only async functions
         self.tools = {
@@ -64,8 +69,8 @@ class AutonomousRedditConsensus:
             descriptions.append(f"- {name}: {desc}")
         return "\n".join(descriptions)
 
-    def _call_llm_with_json_retry(self, prompt: str, fallback_result: Any) -> Any:
-        """Call LLM with retry logic for JSON parsing"""
+    async def _call_llm_with_json_retry(self, prompt: str, fallback_result: Any) -> Any:
+        """Call LLM with simple retry logic for JSON parsing"""
         for attempt in range(2):
             try:
                 response = self.client.chat.completions.create(
@@ -73,6 +78,12 @@ class AutonomousRedditConsensus:
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=self.model_max_tokens,
                 )
+
+                # Track token usage
+                if hasattr(response, 'usage') and response.usage:
+                    self.total_tokens_sent += response.usage.prompt_tokens
+                    self.total_tokens_received += response.usage.completion_tokens
+                    console.print(f"[dim italic]  +{response.usage.prompt_tokens} tokens → {self.total_tokens_sent} total[/dim italic]")
 
                 content = response.choices[0].message.content.strip()
 
@@ -195,7 +206,7 @@ class AutonomousRedditConsensus:
 
     # ===== REASONING TURNS =====
 
-    def _reasoning_turn(self, context: str) -> dict[str, Any]:
+    async def _reasoning_turn(self, context: str) -> dict[str, Any]:
         """Execute one reasoning turn"""
         prompt = get_reasoning_prompt(
             tools_description=self._get_tools_description(),
@@ -209,14 +220,14 @@ class AutonomousRedditConsensus:
             "action": "finalize",
             "reasoning": "JSON parse error, finalizing",
         }
-        parsed = self._call_llm_with_json_retry(prompt, fallback_result)
+        parsed = await self._call_llm_with_json_retry(prompt, fallback_result)
 
         if not isinstance(parsed, dict) or "action" not in parsed:
             print(f"Invalid response format: {parsed}")
             return {"action": "finalize", "reasoning": "Invalid response format"}
         return parsed
 
-    def _critique_turn(self, context: str) -> dict[str, Any]:
+    async def _critique_turn(self, context: str) -> dict[str, Any]:
         """Execute one critique reasoning turn"""
         prompt = get_critique_prompt(
             original_query=self.state.original_query, context=context
@@ -226,7 +237,7 @@ class AutonomousRedditConsensus:
             "action": "finalize",
             "reasoning": "JSON parse error, finalizing",
         }
-        parsed = self._call_llm_with_json_retry(prompt, fallback_result)
+        parsed = await self._call_llm_with_json_retry(prompt, fallback_result)
 
         if not isinstance(parsed, dict) or "action" not in parsed:
             print(f"Invalid response format: {parsed}")
@@ -330,8 +341,8 @@ class AutonomousRedditConsensus:
                 continue
         return "Unknown Post"
 
-    def _generate_draft_recommendations(self) -> list[dict]:
-        """Generate draft recommendations for critique"""
+    async def _generate_draft_recommendations(self) -> list[dict]:
+        """Generate draft insights for critique"""
         prompt = get_draft_recommendations_prompt(
             original_query=self.state.original_query,
             research_data=self.state.research_data,
@@ -343,12 +354,12 @@ class AutonomousRedditConsensus:
             "recommendations": [
                 {
                     "name": "Error",
-                    "description": "Could not parse draft recommendations",
+                    "description": "Could not parse draft insights",
                     "reasoning": "JSON parsing failed",
                 }
             ]
         }
-        result = self._call_llm_with_json_retry(prompt, fallback_result)
+        result = await self._call_llm_with_json_retry(prompt, fallback_result)
 
         # Handle both new structure (dict with recommendations) and old structure (list)
         if isinstance(result, dict) and "recommendations" in result:
@@ -359,8 +370,8 @@ class AutonomousRedditConsensus:
 
     # ===== RECOMMENDATION GENERATION =====
 
-    def _generate_final_recommendations(self) -> dict[str, Any]:
-        """Generate final recommendations incorporating critique findings"""
+    async def _generate_final_recommendations(self) -> dict[str, Any]:
+        """Generate final insights incorporating critique findings"""
         prompt = get_final_recommendations_prompt(
             original_query=self.state.original_query,
             research_data=self.state.research_data,
@@ -372,13 +383,13 @@ class AutonomousRedditConsensus:
             "recommendations": [
                 {
                     "name": "Error",
-                    "description": "Could not parse recommendations",
+                    "description": "Could not parse insights",
                     "reasoning": "JSON parsing failed",
                 }
             ],
             "additional_notes": "",
         }
-        return self._call_llm_with_json_retry(prompt, fallback_result)
+        return await self._call_llm_with_json_retry(prompt, fallback_result)
 
     # ===== PROCESSING PHASES =====
 
@@ -390,7 +401,7 @@ class AutonomousRedditConsensus:
             prefix = ""
             finalize_msg = "Finalizing initial research"
         else:  # critique mode
-            context = f"Draft recommendations: {self.state.draft_recommendations}"
+            context = f"Draft insights: {self.state.draft_recommendations}"
             reasoning_method = self._critique_turn
             prefix = "Critique "
             finalize_msg = "Finalizing critique"
@@ -398,7 +409,7 @@ class AutonomousRedditConsensus:
         for i in range(self.max_iterations):
             print(f"\n {prefix}Iteration {i + 1}")
 
-            decision = reasoning_method(context)
+            decision = await reasoning_method(context)
             self.state.add_reasoning_step(decision.get("reasoning", ""))
 
             if decision.get("action") in ["use_tool", "use_tools"]:
@@ -422,10 +433,10 @@ class AutonomousRedditConsensus:
 
         return context
 
-    def _finalize_recommendations(self):
-        """Generate and store final recommendations"""
-        print_phase_header("Phase 4: Final Recommendations")
-        result = self._generate_final_recommendations()
+    async def _finalize_recommendations(self):
+        """Generate and store final insights"""
+        print_phase_header("Phase 4: Final Insights")
+        result = await self._generate_final_recommendations()
 
         # Handle both new structure (dict with recommendations + additional_notes) and old structure (list)
         if isinstance(result, dict) and "recommendations" in result:
@@ -441,10 +452,18 @@ class AutonomousRedditConsensus:
         self.state.completed = True
 
     async def process_query(self, user_query: str) -> dict[str, Any]:
-        """Main processing method - orchestrates the full recommendation pipeline"""
-        print_phase_header(
-            "Reddit Consensus Agent", f"Processing: {user_query[:100]}..."
+        """Main processing method - orchestrates the full insights pipeline"""
+        print_phase_header("Reddit Consensus Agent")
+        
+        # Show query in a nice box
+        from rich.panel import Panel
+        query_panel = Panel.fit(
+            f"[bold cyan]{user_query}[/bold cyan]",
+            title="[bold]Your query[/bold]",
+            style="cyan",
+            padding=(0, 1),
         )
+        console.print(query_panel)
 
         # Show current configuration
         print_colored("USING", f"{self.model_name}")
@@ -457,14 +476,14 @@ class AutonomousRedditConsensus:
 
         # Phase 2: Generate Draft Recommendations
         print_phase_header("Phase 2: Draft Recommendations")
-        self.state.draft_recommendations = self._generate_draft_recommendations()
+        self.state.draft_recommendations = await self._generate_draft_recommendations()
 
         # Phase 3: Critique Research
         print_phase_header("Phase 3: Critical Analysis")
         await self._run_research_phase(mode="critique")
 
-        # Phase 4: Final Recommendations
-        self._finalize_recommendations()
+        # Phase 4: Final Insights
+        await self._finalize_recommendations()
 
         return {
             "recommendations": self.state.final_recommendations,
@@ -476,7 +495,7 @@ class AutonomousRedditConsensus:
 
     def print_results(self):
         """Print formatted results"""
-        print_phase_header("Final Recommendations")
+        print_phase_header("Final Insights")
         print_recommendations_table(self.state.final_recommendations)
 
         # Print additional notes if available
@@ -488,3 +507,7 @@ class AutonomousRedditConsensus:
         console.print(
             f"\n[bold]Process completed in {len(self.state.reasoning_steps)} reasoning steps[/bold]"
         )
+        
+        # Display token usage summary
+        console.print(f"[dim]Total tokens sent to model: {self.total_tokens_sent}[/dim]")
+
