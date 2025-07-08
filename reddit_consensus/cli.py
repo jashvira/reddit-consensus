@@ -17,8 +17,10 @@ from .recommender import AutonomousRedditConsensus
 
 
 def check_api_keys():
-    """Check if API keys are available, offer to set them if missing"""
+    """Check if API keys are available"""
     print_phase_header("Reddit Consensus Agent", "Checking API configuration...")
+
+    missing_keys = []
 
     # Check OpenAI
     openai_key = os.getenv("OPENAI_API_KEY")
@@ -26,8 +28,7 @@ def check_api_keys():
         print_colored("SUCCESS", "OpenAI API key found")
     else:
         print_colored("ERROR", "OpenAI API key missing")
-        print("Please set OPENAI_API_KEY environment variable")
-        return False
+        missing_keys.append("OPENAI_API_KEY")
 
     # Check Reddit keys
     reddit_client_id = os.getenv("REDDIT_CLIENT_ID")
@@ -36,29 +37,33 @@ def check_api_keys():
 
     if reddit_client_id and reddit_client_secret and reddit_user_agent:
         print_colored("SUCCESS", "Reddit API credentials found")
-        return True
     else:
         print_colored("ERROR", "Reddit API credentials missing")
-        print()
-        print("You can either:")
-        print("1. Set environment variables (recommended)")
-        print("2. Enter credentials now (not saved)")
-        print()
+        if not reddit_client_id:
+            missing_keys.append("REDDIT_CLIENT_ID")
+        if not reddit_client_secret:
+            missing_keys.append("REDDIT_CLIENT_SECRET")
+        if not reddit_user_agent:
+            missing_keys.append("REDDIT_USER_AGENT")
 
-        choice = Prompt.ask(
-            "\n[bold blue]Enter credentials now?[/bold blue]",
-            choices=["y", "n"],
-            default="n",
-        ).lower()
-        if choice == "y":
-            return setup_reddit_keys()
-        else:
-            print()
-            print("To set environment variables:")
-            print("export REDDIT_CLIENT_ID='your_client_id'")
-            print("export REDDIT_CLIENT_SECRET='your_client_secret'")
-            print("export REDDIT_USER_AGENT='YourApp/1.0 (by /u/yourusername)'")
-            return False
+    # If any keys missing, show instructions
+    if missing_keys:
+        print()
+        print("Please set the following environment variables:")
+        for key in missing_keys:
+            if key == "OPENAI_API_KEY":
+                print(f"export {key}='your-openai-api-key'  # Get from https://platform.openai.com/api-keys")
+            elif key == "REDDIT_CLIENT_ID":
+                print(f"export {key}='your-reddit-client-id'  # Get from https://www.reddit.com/prefs/apps/")
+            elif key == "REDDIT_CLIENT_SECRET":
+                print(f"export {key}='your-reddit-client-secret'")
+            elif key == "REDDIT_USER_AGENT":
+                print(f"export {key}='YourApp/1.0 (by /u/yourusername)'")
+        print()
+        print("Then restart the application.")
+        return False
+
+    return True
 
 
 def setup_reddit_keys():
