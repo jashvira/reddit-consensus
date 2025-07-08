@@ -43,6 +43,8 @@ Instructions:
 - At least collect 5 strong sources of information before finalizing
 - Once you have comprehensive Reddit consensus from multiple diverse sources, finalize
 
+AVOID REPETITION: Don't search for the same or nearly identical terms repeatedly. If a search returns irrelevant results, try different keywords or angles. Repeating failed searches wastes tokens and provides no new information.
+
 Respond in JSON format.
 
 For single tool use:
@@ -127,6 +129,10 @@ Your task is to search for criticism, negative experiences, or issues with your 
 - Context-specific limitations (e.g., good for X but not Y)
 
 Search for discussions that contradict or provide nuance. Note: If the query has limited criticism potential (e.g., factual questions, non-controversial topics), do a basic search but don't force extensive critique - some topics simply don't have significant negative angles.
+
+CRITICAL: Avoid repeating identical or nearly identical searches. Check the context above for your previous search attempts - if you see the same search terms already tried, DO NOT repeat them. If previous searches returned irrelevant results, this is a clear signal that criticism doesn't exist on Reddit for this topic. Stop searching and finalize instead of wasting tokens on repetitive failed searches.
+
+Before searching, look at what you already tried. If you've already searched similar terms, either try completely different keywords or finalize if no relevant criticism exists.
 
 Respond in JSON format.
 
