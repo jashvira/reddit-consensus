@@ -365,14 +365,10 @@ def render_dashboard(tool_results: list[dict[str, Any]]) -> None:
     if not tool_results:
         return
 
-    # Create panels
-    tool_table = create_tool_table(tool_results)
+    # Create result panels (skip the tool table)
     result_panels = create_result_panels(tool_results)
 
-    # Display tool table
-    console.print(tool_table)
-
-    # Display result panels
+    # Display result panels only
     for panel in result_panels:
         console.print(panel)
 
@@ -408,17 +404,17 @@ def print_additional_notes(additional_notes: str) -> None:
 
 
 def print_recommendations_table(recommendations: list[dict[str, Any]]) -> None:
-    """Print recommendations in table format - alias for backward compatibility"""
+    """Print insights in table format - alias for backward compatibility"""
     print_recommendations(recommendations)
 
 
 def print_recommendations(recommendations: list[dict[str, Any]]) -> None:
-    """Print final recommendations elegantly"""
+    """Print final insights elegantly"""
     if not recommendations:
         return
 
     for i, rec in enumerate(recommendations, 1):
-        title = f"{i}. {rec.get('name', 'Recommendation')}"
+        title = f"{i}. {rec.get('name', 'Insight')}"
 
         lines = []
         if rec.get("description"):
