@@ -459,7 +459,7 @@ class AutonomousRedditConsensus:
         from rich.panel import Panel
         query_panel = Panel.fit(
             f"[bold cyan]{user_query}[/bold cyan]",
-            title="[bold]Your query[/bold]",
+            title="[bold cyan]Your query[/bold cyan]",
             style="cyan",
             padding=(0, 1),
         )

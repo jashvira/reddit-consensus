@@ -51,7 +51,7 @@ def check_api_keys():
         print()
 
         choice = Prompt.ask(
-            "\n[bold cyan]Enter credentials now?[/bold cyan]",
+            "\n[bold blue]Enter credentials now?[/bold blue]",
             choices=["y", "n"],
             default="n",
         ).lower()
@@ -102,14 +102,14 @@ async def ask_query():
 
     # Create input prompt panel
     prompt_panel = Panel.fit(
-        "[bold cyan]What would you like to ask the Reddit hive mind?[/bold cyan]\n"
+        "[bold blue]What would you like to ask the Reddit hive mind?[/bold blue]\n"
         + "[dim]Examples: 'best coffee shops in tokyo', 'budget laptops under $800', 'reliable used cars'[/dim]",
-        style="cyan",
+        style="blue",
         padding=(1, 2),
     )
     console.print(prompt_panel)
 
-    query = Prompt.ask("[bold]Your query:[/bold]", console=console).strip()
+    query = Prompt.ask("\n[bold cyan]Your query[/bold cyan]", console=console).strip()
 
     if not query:
         print("Please enter a query to get insights.")
