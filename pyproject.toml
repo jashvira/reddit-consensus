@@ -1,6 +1,6 @@
 [project]
 name = "reddit-consensus"
-version = "0.1.0"
+version = "0.1.1"
 description = "Autonomous AI agent for tasteful recommendations via Reddit community analysis"
 readme = "README.md"
 license = "MIT"
@@ -52,7 +52,7 @@ Documentation = "https://github.com/jashvira/reddit-consensus#readme"
 "Bug Tracker" = "https://github.com/jashvira/reddit-consensus/issues"
 
 [project.scripts]
-ask-reddit = "ask_reddit:main"
+ask-reddit = "reddit_consensus.cli:main"
 
 [tool.black]
 line-length = 88
