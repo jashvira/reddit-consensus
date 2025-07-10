@@ -69,3 +69,6 @@ GEMINI.md
 lesson_1/
 lesson_2/
 lesson_3/
+
+# Large evaluation datasets (download with commands in evals/README.md)
+evals/datasets/*.parquet
