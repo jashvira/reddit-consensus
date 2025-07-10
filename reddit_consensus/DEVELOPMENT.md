@@ -175,3 +175,165 @@
 - Simplified LLM calls with basic JSON retry logic (no complex rate limiting)
 
 **Remember:** Update DEVELOPMENT.md when significant architecture changes are made.
+
+## Evaluation Dataset Generation Pipeline
+
+### Data Acquisition Strategy
+
+**Historical Reddit Data (2016):**
+- Source: Hugging Face `fddemarco/pushshift-reddit` and `fddemarco/pushshift-reddit-comments`
+- Selection: February 2016 (latest available with both posts and comments)
+- Scale: ~22GB raw data → ~50MB filtered dataset
+
+**Subreddit Discovery:**
+- **API Search**: Used `reddit.subreddits.search('ask')` instead of `search_by_name()` 
+- **Pattern Expansion**: Multiple search terms (`ask`, `askscience`, `askengineers`, etc.)
+- **Result**: Found 57 Ask subreddits vs 10 with basic search
+- **Key Insight**: Broader search methods reveal more comprehensive results
+
+### Data Filtering Pipeline
+
+**Multi-Stage Filtering Approach:**
+1. **Subreddit Filter**: Target high-quality communities (`AskHistorians`, `AskEngineers`, etc.)
+2. **Engagement Thresholds**: Score ≥300, comments ≥20 
+3. **Content Quality**: Non-empty titles and body text
+4. **Deduplication**: Remove posts with identical lowercased titles per subreddit
+5. **Token Limits**: Combined content ≤4096 tokens (estimated at chars/3)
+6. **Quota Control**: Max 600 posts per subreddit
+
+**Reddit ID Normalization:**
+- **Problem**: Comment `link_id` has `t3_` prefix, post `id` doesn't
+- **Solution**: Strip `t3_` prefix before joining data
+- **Pattern**: `top_comments['link_id'] = top_comments['link_id'].str.replace('t3_', '')`
+
+**Comment Integration Strategy:**
+- Top 40 comments per post by score
+- Comments stored as nested JSON within post records
+- Preserves comment metadata (score, timestamp, author flair)
+
+### Question Curation System
+
+**3-Pass Cost-Optimized Pipeline:**
+
+**Pass 0: Content Screening** (gpt-4o-mini, ~$0.0001)
+- **Rejects**: Subjective discussions, poor quality threads, unanswerable questions
+- **Criteria**: <3 meaningful comments, opinion-based content, insufficient context
+- **ROI**: 50-70% cost savings by filtering unsuitable posts early
+
+**Pass 1: Keyword Extraction** (gpt-4o-mini, ~$0.0001) 
+- Extract domain-specific terms, technical jargon, brand names
+- Build forbidden vocabulary list for masked question generation
+- Focus on specific terminology that reveals source discussion
+
+**Pass 2: Question Generation** (gpt-4o, ~$0.01)
+- Generate evaluation questions using abstract/generic terminology
+- Identify key comment IDs containing essential insights
+- Map comment numbers to actual Reddit comment IDs for answer validation
+
+**Smart Cost Allocation:**
+- Cheap model for extraction tasks (90% of calls)
+- Quality model only for final question crafting
+- Total cost: ~$0.01 per accepted question, $0.0001 per rejected
+
+### Rate Limit Handling & Retry Logic
+
+**Intelligent Retry System:**
+- **Wait Time Parsing**: Extracts exact wait times from OpenAI error messages (e.g., "Please try again in 198ms")
+- **Exponential Backoff**: Fallback strategy when no specific wait time is provided
+- **Jitter Addition**: Random component prevents thundering herd effects
+- **Selective Retries**: Only retries on rate limit errors (429 status), other errors re-raised immediately
+
+**Implementation Details:**
+- `retry_on_rate_limit()` async function wraps all OpenAI API calls
+- Configurable `max_retries` (default: 3) and `base_delay` (default: 1.0s)
+- Regex parsing for "try again in Xms" and "try again in Xs" patterns
+- Applied to all 3 passes: screening, keyword extraction, question generation
+
+**Command Line Options:**
+- `--max-retries`: Control retry behavior (default: 3)
+- Debug logging shows retry attempts and wait times
+- Preserves original error handling for non-rate-limit failures
+
+**Performance Impact:**
+- Eliminates manual restarts due to rate limiting
+- Respects API-suggested wait times for optimal throughput
+- Maintains progress across large dataset processing batches
+
+### Data Processing Optimizations
+
+**Memory Management:**
+- **Challenge**: Pandas parquet reading doesn't support chunking
+- **Solution**: Load full dataset, apply filters sequentially 
+- **Alternative**: Polars for larger datasets if memory constraints persist
+
+**Processing Order:**
+1. Filter posts first (massive data reduction)
+2. Extract kept post IDs for comment filtering  
+3. Process comments only for surviving posts
+4. Join and apply final constraints
+
+**Performance Patterns:**
+- Early filtering reduces downstream processing by 95%+
+- Post-comment joining on filtered datasets vs full join
+- Sequential filtering more memory-efficient than complex queries
+
+### Question Generation Techniques
+
+**Abstraction Strategies:**
+- **Domain Shifting**: "sourdough starter" → "fermented culture"
+- **Conceptual Elevation**: Specific problems → underlying principles  
+- **Vocabulary Masking**: Technical terms → generic equivalents
+- **Perspective Rotation**: Direct advice → hypothetical scenarios
+
+**Quality Assurance:**
+- Forbidden keyword enforcement with semantic similarity checking
+- Answerability validation against source content
+- Comment targeting for evaluation reference
+- Structured output parsing with fallback handling
+
+**Output Format:**
+```python
+{
+    'rejected': False,
+    'questions': 'What causes fermented cultures to develop chemical odors?',
+    'forbidden_keywords': ['sourdough', 'starter', 'acetone'],
+    'key_comment_ids': ['comment1', 'comment2'],
+    'key_comment_numbers': [1, 2],
+    'source_post_id': 'abc123',
+    'cost_estimate': 0.0102
+}
+```
+
+### Key Learnings
+
+**Data Quality > Quantity:**
+- 90 filtered posts from millions of raw posts
+- Focus on substantive discussions with expert insights
+- Quality thresholds eliminate noise more effectively than post-processing
+
+**Cost Optimization Patterns:**
+- Model selection based on task complexity
+- Early rejection saves expensive processing
+- Structured prompts reduce token usage
+
+**Reddit Data Characteristics:**
+- Many posts lack selftext (link/image posts)
+- Comment threading requires careful ID management
+- Historical data has different quality patterns than current Reddit
+
+**Pipeline Robustness:**
+- Graceful handling of missing data (NaN, empty fields)
+- Type checking for nested structures (lists vs floats)
+- Fallback parsing for LLM response variations
+
+### File Structure
+
+**Evaluation Pipeline:**
+- `evals/scripts/process_reddit_data.py`: Main data filtering pipeline
+- `evals/scripts/question_curator.py`: 3-pass question generation system
+- `evals/scripts/list_ask_subreddits.py`: Subreddit discovery tool
+- `evals/datasets/`: Raw data storage and subreddit lists
+- `evals/processed/`: Filtered datasets ready for evaluation
+- `evals/notebooks/`: Interactive data exploration and processing
+
+**Remember:** Evaluation dataset generation focuses on quality over scale, with cost-efficient LLM usage and robust data processing patterns.

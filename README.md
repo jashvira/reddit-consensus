@@ -54,7 +54,7 @@ python ask_reddit.py
 ```
 
 The interactive session will:
-1. Check your API keys (or help you enter them)
+1. Check your API keys are set
 2. Ask what you'd like insights on
 3. Analyze Reddit discussions with elegant dashboard
 4. Show balanced insights with pros/cons
@@ -81,18 +81,14 @@ uv sync
 ```
 
 ### 2. API Keys
-You can either set environment variables or enter them when prompted:
+Set these environment variables:
 
-#### Option A: Environment Variables (Recommended)
 ```bash
 export OPENAI_API_KEY="your-openai-api-key"
 export REDDIT_CLIENT_ID="your-reddit-client-id"
 export REDDIT_CLIENT_SECRET="your-reddit-client-secret"
 export REDDIT_USER_AGENT="YourApp/1.0 (by /u/yourusername)"
 ```
-
-#### Option B: Enter When Prompted
-Run `python ask_reddit.py` and the interactive session will help you enter credentials.
 
 ### 3. Get API Keys
 - **OpenAI**: https://platform.openai.com/
