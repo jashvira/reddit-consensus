@@ -3,18 +3,18 @@
 **EXPERIMENTAL CODE**
 This directory contains research/experimental code for generating evaluation questions from Reddit discussions. The code is not production-ready and may contain hardcoded paths, incomplete error handling, and other research-quality shortcuts.
 
-This directory contains tools and datasets for generating evaluation questions from Reddit discussions using a cost-optimized 3-pass pipeline.
+This directory contains tools and datasets for generating evaluation questions from Reddit discussions using a 3-pass pipeline.
 
 ## Quick Start
 
 ```bash
-# Screen posts only (fast, cheap)
+# Screen posts only (fast)
 python scripts/question_curator.py --screen-only --max-posts 100
 
 # Generate masked questions (default mode)
 python scripts/question_curator.py --max-posts 50
 
-# Generate direct questions (no masking, 30% cheaper)
+# Generate direct questions (no masking, faster)
 python scripts/question_curator.py --max-posts 50 --no-masking
 ```
 
@@ -49,13 +49,13 @@ posts = load_dataset("fddemarco/pushshift-reddit",
 ## Pipeline Overview
 
 ### 3-Pass Question Generation (Default)
-1. **Content Screening** (`gpt-4o-mini`, ~$0.0001) - Accept/reject posts
-2. **Keyword Extraction** (`gpt-4o-mini`, ~$0.0001) - Build forbidden word list
-3. **Masked Question Generation** (`gpt-4o`, ~$0.01) - Create abstract questions
+1. **Content Screening** - Accept/reject posts
+2. **Keyword Extraction** - Build forbidden word list
+3. **Masked Question Generation** - Create abstract questions
 
 ### 2-Pass Direct Questions (`--no-masking`)
-1. **Content Screening** (`gpt-4o-mini`, ~$0.0001) - Accept/reject posts
-2. **Direct Question Generation** (`gpt-4o`, ~$0.007) - Use original terminology
+1. **Content Screening** - Accept/reject posts
+2. **Direct Question Generation** - Use original terminology
 
 ## File Structure
 
@@ -133,17 +133,17 @@ Options:
 }
 ```
 
-## Cost Analysis
+## Mode Comparison
 
-| Mode | Passes | Cost per Question | Use Case |
-|------|--------|------------------|----------|
-| Masked | 3 | ~$0.01 | Abstract reasoning, concept understanding |
-| Direct | 2 | ~$0.007 | Specific knowledge, factual recall |
-| Screen Only | 1 | ~$0.0001 | Quality filtering |
+| Mode | Passes | Use Case |
+|------|--------|-----------|
+| Masked | 3 | Abstract reasoning, concept understanding |
+| Direct | 2 | Specific knowledge, factual recall |
+| Screen Only | 1 | Quality filtering |
 
 ## Key Features
 
-- **Cost-optimized**: Cheap model for screening/extraction, quality model for generation
+- **Model optimization**: Efficient model selection for different tasks
 - **Rate limit handling**: Intelligent retry with exponential backoff
 - **Progress tracking**: Real-time tqdm progress bars
 - **Two evaluation modes**: Masked (abstract) vs Direct (specific) questions
@@ -165,4 +165,4 @@ pip install pandas numpy pyarrow datasets openai tqdm
 - **Start small**: Use `--max-posts 10` for testing
 - **Use screening**: Run `--screen-only` first to estimate accept/reject rates
 - **Adjust concurrency**: Lower `--max-concurrent` if hitting rate limits
-- **No-masking mode**: 30% cheaper and 33% faster for direct questions
+- **No-masking mode**: Faster processing for direct questions
